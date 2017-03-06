@@ -53,6 +53,7 @@ interface JobManagement {
      * @return the id of the created or updated config file
      * @since 1.25
      */
+    @Deprecated
     String createOrUpdateConfigFile(ConfigFile configFile, boolean ignoreExisting)
 
     /**
@@ -196,6 +197,14 @@ interface JobManagement {
     boolean isMinimumPluginVersionInstalled(String pluginShortName, String version)
 
     /**
+     * Returns {@code true} if the currently running version of Jenkins is equal to or greater than the specified
+     * version.
+     *
+     * @since 1.54
+     */
+    boolean isMinimumCoreVersion(String version)
+
+    /**
      * Returns the version of Jenkins.
      *
      * @since 1.33
@@ -218,6 +227,7 @@ interface JobManagement {
      *         be found
      * @since 1.25
      */
+    @Deprecated
     String getConfigFileId(ConfigFileType type, String name)
 
     /**

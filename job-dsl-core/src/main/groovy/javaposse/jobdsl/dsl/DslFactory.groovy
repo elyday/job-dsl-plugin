@@ -1,11 +1,13 @@
 package javaposse.jobdsl.dsl
 
+import javaposse.jobdsl.dsl.helpers.ConfigFilesContext
 import javaposse.jobdsl.dsl.jobs.BuildFlowJob
 import javaposse.jobdsl.dsl.jobs.FreeStyleJob
 import javaposse.jobdsl.dsl.jobs.IvyJob
 import javaposse.jobdsl.dsl.jobs.MatrixJob
 import javaposse.jobdsl.dsl.jobs.MavenJob
 import javaposse.jobdsl.dsl.jobs.MultiJob
+import javaposse.jobdsl.dsl.jobs.OrganizationFolderJob
 import javaposse.jobdsl.dsl.jobs.WorkflowJob
 import javaposse.jobdsl.dsl.jobs.MultibranchWorkflowJob
 
@@ -47,7 +49,7 @@ interface DslFactory extends ViewFactory {
      * @since 1.30
      * @see #buildFlowJob(java.lang.String, groovy.lang.Closure)
      */
-    @RequiresPlugin(id = 'build-flow-plugin')
+    @RequiresPlugin(id = 'build-flow-plugin', failIfMissing = true)
     BuildFlowJob buildFlowJob(String name)
 
     /**
@@ -55,7 +57,7 @@ interface DslFactory extends ViewFactory {
      *
      * @since 1.31
      */
-    @RequiresPlugin(id = 'build-flow-plugin')
+    @RequiresPlugin(id = 'build-flow-plugin', failIfMissing = true)
     BuildFlowJob buildFlowJob(String name, @DslContext(BuildFlowJob) Closure closure)
 
     /**
@@ -64,7 +66,7 @@ interface DslFactory extends ViewFactory {
      * @since 1.38
      * @see #ivyJob(java.lang.String, groovy.lang.Closure)
      */
-    @RequiresPlugin(id = 'ivy', minimumVersion = '1.23')
+    @RequiresPlugin(id = 'ivy', minimumVersion = '1.23', failIfMissing = true)
     IvyJob ivyJob(String name)
 
     /**
@@ -72,7 +74,7 @@ interface DslFactory extends ViewFactory {
      *
      * @since 1.38
      */
-    @RequiresPlugin(id = 'ivy', minimumVersion = '1.23')
+    @RequiresPlugin(id = 'ivy', minimumVersion = '1.23', failIfMissing = true)
     IvyJob ivyJob(String name, @DslContext(IvyJob) Closure closure)
 
     /**
@@ -81,7 +83,7 @@ interface DslFactory extends ViewFactory {
      * @since 1.30
      * @see #matrixJob(java.lang.String, groovy.lang.Closure)
      */
-    @RequiresPlugin(id = 'matrix-project')
+    @RequiresPlugin(id = 'matrix-project', failIfMissing = true)
     MatrixJob matrixJob(String name)
 
     /**
@@ -89,7 +91,7 @@ interface DslFactory extends ViewFactory {
      *
      * @since 1.31
      */
-    @RequiresPlugin(id = 'matrix-project')
+    @RequiresPlugin(id = 'matrix-project', failIfMissing = true)
     MatrixJob matrixJob(String name, @DslContext(MatrixJob) Closure closure)
 
     /**
@@ -98,7 +100,7 @@ interface DslFactory extends ViewFactory {
      * @since 1.30
      * @see #mavenJob(java.lang.String, groovy.lang.Closure)
      */
-    @RequiresPlugin(id = 'maven-plugin', minimumVersion = '2.3')
+    @RequiresPlugin(id = 'maven-plugin', minimumVersion = '2.3', failIfMissing = true)
     MavenJob mavenJob(String name)
 
     /**
@@ -106,7 +108,7 @@ interface DslFactory extends ViewFactory {
      *
      * @since 1.31
      */
-    @RequiresPlugin(id = 'maven-plugin', minimumVersion = '2.3')
+    @RequiresPlugin(id = 'maven-plugin', minimumVersion = '2.3', failIfMissing = true)
     MavenJob mavenJob(String name, @DslContext(MavenJob) Closure closure)
 
     /**
@@ -115,7 +117,7 @@ interface DslFactory extends ViewFactory {
      * @since 1.30
      * @see #multiJob(java.lang.String, groovy.lang.Closure)
      */
-    @RequiresPlugin(id = 'jenkins-multijob-plugin', minimumVersion = '1.16')
+    @RequiresPlugin(id = 'jenkins-multijob-plugin', minimumVersion = '1.16', failIfMissing = true)
     MultiJob multiJob(String name)
 
     /**
@@ -123,7 +125,7 @@ interface DslFactory extends ViewFactory {
      *
      * @since 1.31
      */
-    @RequiresPlugin(id = 'jenkins-multijob-plugin', minimumVersion = '1.16')
+    @RequiresPlugin(id = 'jenkins-multijob-plugin', minimumVersion = '1.16', failIfMissing = true)
     MultiJob multiJob(String name, @DslContext(MultiJob) Closure closure)
 
     /**
@@ -133,7 +135,7 @@ interface DslFactory extends ViewFactory {
      * @since 1.47
      * @see #pipelineJob(java.lang.String, groovy.lang.Closure)
      */
-    @RequiresPlugin(id = 'workflow-aggregator')
+    @RequiresPlugin(id = 'workflow-aggregator', failIfMissing = true)
     WorkflowJob pipelineJob(String name)
 
     /**
@@ -142,7 +144,7 @@ interface DslFactory extends ViewFactory {
      *
      * @since 1.47
      */
-    @RequiresPlugin(id = 'workflow-aggregator')
+    @RequiresPlugin(id = 'workflow-aggregator', failIfMissing = true)
     WorkflowJob pipelineJob(String name, @DslContext(WorkflowJob) Closure closure)
 
     /**
@@ -151,15 +153,32 @@ interface DslFactory extends ViewFactory {
      * @since 1.47
      * @see #multibranchPipelineJob(java.lang.String, groovy.lang.Closure)
      */
-    @RequiresPlugin(id = 'workflow-multibranch', minimumVersion = '1.12')
+    @RequiresPlugin(id = 'workflow-multibranch', minimumVersion = '1.12', failIfMissing = true)
     MultibranchWorkflowJob multibranchPipelineJob(String name)
+
+    /**
+     * Creates or updates an organization folder job.
+     *
+     * @since 1.58
+     * @see #organizationFolder(java.lang.String)
+     */
+    @RequiresPlugin(id = 'branch-api', minimumVersion = '1.11', failIfMissing = true)
+    OrganizationFolderJob organizationFolder(String name, @DslContext(OrganizationFolderJob) Closure closure)
+
+    /**
+     * Creates or updates an organization folder job.
+     *
+     * @since 1.58
+     */
+    @RequiresPlugin(id = 'branch-api', minimumVersion = '1.11', failIfMissing = true)
+    OrganizationFolderJob organizationFolder(String name)
 
     /**
      * Creates or updates a multibranch pipeline job.
      *
      * @since 1.47
      */
-    @RequiresPlugin(id = 'workflow-multibranch', minimumVersion = '1.12')
+    @RequiresPlugin(id = 'workflow-multibranch', minimumVersion = '1.12', failIfMissing = true)
     MultibranchWorkflowJob multibranchPipelineJob(String name, @DslContext(MultibranchWorkflowJob) Closure closure)
 
     /**
@@ -168,7 +187,7 @@ interface DslFactory extends ViewFactory {
      * @since 1.30
      * @see #folder(java.lang.String, groovy.lang.Closure)
      */
-    @RequiresPlugin(id = 'cloudbees-folder', minimumVersion = '5.0')
+    @RequiresPlugin(id = 'cloudbees-folder', minimumVersion = '5.0', failIfMissing = true)
     Folder folder(String name)
 
     /**
@@ -176,7 +195,7 @@ interface DslFactory extends ViewFactory {
      *
      * @since 1.31
      */
-    @RequiresPlugin(id = 'cloudbees-folder', minimumVersion = '5.0')
+    @RequiresPlugin(id = 'cloudbees-folder', minimumVersion = '5.0', failIfMissing = true)
     Folder folder(String name, @DslContext(Folder) Closure closure)
 
     /**
@@ -184,16 +203,20 @@ interface DslFactory extends ViewFactory {
      *
      * @since 1.30
      * @see #customConfigFile(java.lang.String, groovy.lang.Closure)
+     * @deprecated use {@link #configFiles(groovy.lang.Closure)} instead
      */
-    @RequiresPlugin(id = 'config-file-provider')
+    @RequiresPlugin(id = 'config-file-provider', failIfMissing = true)
+    @Deprecated
     ConfigFile customConfigFile(String name)
 
     /**
      * Creates a managed custom file.
      *
      * @since 1.31
+     * @deprecated use {@link #configFiles(groovy.lang.Closure)} instead
      */
-    @RequiresPlugin(id = 'config-file-provider')
+    @RequiresPlugin(id = 'config-file-provider', failIfMissing = true)
+    @Deprecated
     ConfigFile customConfigFile(String name, @DslContext(ConfigFile) Closure closure)
 
     /**
@@ -201,49 +224,70 @@ interface DslFactory extends ViewFactory {
      *
      * @since 1.30
      * @see #mavenSettingsConfigFile(java.lang.String, groovy.lang.Closure)
+     * @deprecated use {@link #configFiles(groovy.lang.Closure)} instead
      */
-    @RequiresPlugin(id = 'config-file-provider')
+    @RequiresPlugin(id = 'config-file-provider', failIfMissing = true)
+    @Deprecated
     MavenSettingsConfigFile mavenSettingsConfigFile(String name)
 
     /**
      * Creates a managed Maven settings file.
      *
      * @since 1.31
+     * @deprecated use {@link #configFiles(groovy.lang.Closure)} instead
      */
-    @RequiresPlugin(id = 'config-file-provider')
+    @RequiresPlugin(id = 'config-file-provider', failIfMissing = true)
+    @Deprecated
     MavenSettingsConfigFile mavenSettingsConfigFile(String name, @DslContext(ConfigFile) Closure closure)
 
     /**
      * Creates a managed global Maven settings file.
      *
      * @since 1.39
+     * @deprecated use {@link #configFiles(groovy.lang.Closure)} instead
      */
-    @RequiresPlugin(id = 'config-file-provider')
+    @RequiresPlugin(id = 'config-file-provider', failIfMissing = true)
+    @Deprecated
     MavenSettingsConfigFile globalMavenSettingsConfigFile(String name)
 
     /**
      * Creates a managed global Maven settings file.
      *
      * @since 1.39
+     * @deprecated use {@link #configFiles(groovy.lang.Closure)} instead
      */
-    @RequiresPlugin(id = 'config-file-provider')
+    @RequiresPlugin(id = 'config-file-provider', failIfMissing = true)
+    @Deprecated
     MavenSettingsConfigFile globalMavenSettingsConfigFile(String name, @DslContext(ConfigFile) Closure closure)
 
     /**
      * Creates a managed script file.
      *
      * @since 1.40
+     * @deprecated use {@link #configFiles(groovy.lang.Closure)} instead
      */
     @RequiresPlugin(id = 'managed-scripts', minimumVersion = '1.2.1', failIfMissing = true)
+    @Deprecated
     ConfigFile managedScriptConfigFile(String name)
 
     /**
      * Creates a managed script file.
      *
      * @since 1.40
+     * @deprecated use {@link #configFiles(groovy.lang.Closure)} instead
      */
     @RequiresPlugin(id = 'managed-scripts', minimumVersion = '1.2.1', failIfMissing = true)
+    @Deprecated
     ParametrizedConfigFile managedScriptConfigFile(String name, @DslContext(ParametrizedConfigFile) Closure closure)
+
+    /**
+     * Creates managed config files.
+     *
+     * @since 1.58
+     */
+    @NoDoc(embeddedOnly = true)
+    @RequiresPlugin(id = 'config-file-provider')
+    void configFiles(@DslContext(ConfigFilesContext) Closure closure)
 
     /**
      * Upload the stream as <a href="https://wiki.jenkins-ci.org/display/JENKINS/User+Content">user content</a>.

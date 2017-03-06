@@ -4,7 +4,6 @@ import com.cloudbees.hudson.plugins.folder.Folder
 import hudson.FilePath
 import hudson.model.AbstractItem
 import hudson.model.AbstractProject
-import hudson.model.Action
 import hudson.model.FreeStyleBuild
 import hudson.model.FreeStyleProject
 import hudson.model.Items
@@ -17,13 +16,15 @@ import hudson.model.View
 import hudson.slaves.DumbSlave
 import javaposse.jobdsl.dsl.GeneratedJob
 import javaposse.jobdsl.dsl.GeneratedView
-import javaposse.jobdsl.plugin.actions.ApiViewerAction
 import javaposse.jobdsl.plugin.actions.GeneratedJobsAction
 import javaposse.jobdsl.plugin.actions.GeneratedJobsBuildAction
 import javaposse.jobdsl.plugin.actions.GeneratedViewsAction
 import javaposse.jobdsl.plugin.actions.GeneratedViewsBuildAction
 import javaposse.jobdsl.plugin.actions.SeedJobAction
 import javaposse.jobdsl.plugin.fixtures.ExampleJobDslExtension
+import org.jenkinsci.plugins.configfiles.GlobalConfigFiles
+import org.jenkinsci.plugins.configfiles.custom.CustomConfig
+import org.jenkinsci.plugins.managedscripts.PowerShellConfig
 import org.junit.Rule
 import org.jvnet.hudson.test.JenkinsRule
 import org.jvnet.hudson.test.WithoutJenkins
@@ -244,70 +245,6 @@ class ExecuteDslScriptsSpec extends Specification {
 
         then:
         executeDslScripts.additionalClasspath == null
-    }
-
-    @WithoutJenkins
-    def 'script location'() {
-        setup:
-        ExecuteDslScripts executeDslScripts = new ExecuteDslScripts()
-
-        expect:
-        executeDslScripts.scriptLocation == null
-
-        when:
-        executeDslScripts.scriptLocation = new ExecuteDslScripts.ScriptLocation('foo', 'bar', 'baz')
-
-        then:
-        executeDslScripts.scriptLocation == null
-        executeDslScripts.scriptText == null
-        executeDslScripts.targets == 'bar'
-        !executeDslScripts.usingScriptText
-        executeDslScripts.useScriptText == null
-
-        when:
-        executeDslScripts.scriptLocation = new ExecuteDslScripts.ScriptLocation('true', '', 'foo')
-
-        then:
-        executeDslScripts.scriptLocation == null
-        executeDslScripts.scriptText == 'foo'
-        executeDslScripts.targets == null
-        executeDslScripts.usingScriptText
-        executeDslScripts.useScriptText == null
-
-        when:
-        executeDslScripts.scriptLocation = new ExecuteDslScripts.ScriptLocation()
-
-        then:
-        executeDslScripts.scriptLocation == null
-        executeDslScripts.scriptText == null
-        executeDslScripts.targets == null
-        !executeDslScripts.usingScriptText
-        executeDslScripts.useScriptText == null
-
-        when:
-        executeDslScripts.scriptLocation = null
-
-        then:
-        executeDslScripts.scriptLocation == null
-        executeDslScripts.scriptText == null
-        executeDslScripts.targets == null
-        executeDslScripts.usingScriptText
-        executeDslScripts.useScriptText == null
-    }
-
-    @WithoutJenkins
-    def 'getProjectActions'() {
-        setup:
-        ExecuteDslScripts executeDslScripts = new ExecuteDslScripts()
-        AbstractProject project = Mock(AbstractProject)
-
-        when:
-        List<? extends Action> actions = new ArrayList<? extends Action>(executeDslScripts.getProjectActions(project))
-
-        then:
-        actions != null
-        actions.size() == 1
-        actions[0] instanceof ApiViewerAction
     }
 
     def scheduleBuildOnMasterUsingScriptText() {
@@ -1362,6 +1299,54 @@ class ExecuteDslScriptsSpec extends Specification {
 
         then:
         build.result == FAILURE
+    }
+
+    def 'creates config files'() {
+        setup:
+        FreeStyleProject job = jenkinsRule.createFreeStyleProject('seed')
+        job.buildersList.add(new ExecuteDslScripts(scriptText: getClass().getResource('configFiles.groovy').text))
+        job.onCreatedFromScratch()
+
+        when:
+        FreeStyleBuild freeStyleBuild = job.scheduleBuild2(0).get()
+
+        then:
+        freeStyleBuild.result == SUCCESS
+        GlobalConfigFiles.get().getById('one') instanceof CustomConfig
+        GlobalConfigFiles.get().getById('one').name == 'Config 1'
+        GlobalConfigFiles.get().getById('one').comment == 'lorem'
+        GlobalConfigFiles.get().getById('one').content == 'ipsum'
+        GlobalConfigFiles.get().getById('one').providerId == '???'
+        GlobalConfigFiles.get().getById('two') instanceof PowerShellConfig
+        GlobalConfigFiles.get().getById('two').name == 'Config 2'
+        GlobalConfigFiles.get().getById('two').comment == 'foo'
+        GlobalConfigFiles.get().getById('two').content == 'bar'
+    }
+
+    def 'creates config files ignore existing'() {
+        setup:
+        GlobalConfigFiles.get().save(new CustomConfig('one', '111', '222', '333', '444'))
+        FreeStyleProject job = jenkinsRule.createFreeStyleProject('seed')
+        job.buildersList.add(new ExecuteDslScripts(
+                scriptText: getClass().getResource('configFiles.groovy').text,
+                ignoreExisting: true
+        ))
+        job.onCreatedFromScratch()
+
+        when:
+        FreeStyleBuild freeStyleBuild = job.scheduleBuild2(0).get()
+
+        then:
+        freeStyleBuild.result == SUCCESS
+        GlobalConfigFiles.get().getById('one') instanceof CustomConfig
+        GlobalConfigFiles.get().getById('one').name == '111'
+        GlobalConfigFiles.get().getById('one').comment == '222'
+        GlobalConfigFiles.get().getById('one').content == '333'
+        GlobalConfigFiles.get().getById('one').providerId == '444'
+        GlobalConfigFiles.get().getById('two') instanceof PowerShellConfig
+        GlobalConfigFiles.get().getById('two').name == 'Config 2'
+        GlobalConfigFiles.get().getById('two').comment == 'foo'
+        GlobalConfigFiles.get().getById('two').content == 'bar'
     }
 
     private static final String SCRIPT = """job('test-job') {

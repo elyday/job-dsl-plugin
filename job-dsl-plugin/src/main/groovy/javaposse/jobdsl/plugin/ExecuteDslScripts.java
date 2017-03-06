@@ -13,7 +13,6 @@ import hudson.Launcher;
 import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.Action;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.Items;
@@ -25,7 +24,6 @@ import hudson.model.ViewGroup;
 import hudson.tasks.Builder;
 import hudson.util.RunList;
 import javaposse.jobdsl.dsl.DslException;
-import javaposse.jobdsl.dsl.DslScriptLoader;
 import javaposse.jobdsl.dsl.GeneratedConfigFile;
 import javaposse.jobdsl.dsl.GeneratedItems;
 import javaposse.jobdsl.dsl.GeneratedJob;
@@ -33,7 +31,6 @@ import javaposse.jobdsl.dsl.GeneratedUserContent;
 import javaposse.jobdsl.dsl.GeneratedView;
 import javaposse.jobdsl.dsl.JobManagement;
 import javaposse.jobdsl.dsl.ScriptRequest;
-import javaposse.jobdsl.plugin.actions.ApiViewerAction;
 import javaposse.jobdsl.plugin.actions.GeneratedConfigFilesAction;
 import javaposse.jobdsl.plugin.actions.GeneratedConfigFilesBuildAction;
 import javaposse.jobdsl.plugin.actions.GeneratedJobsAction;
@@ -52,7 +49,6 @@ import javax.annotation.Nonnull;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -70,50 +66,6 @@ import static javaposse.jobdsl.plugin.actions.GeneratedObjectsAction.extractGene
  */
 public class ExecuteDslScripts extends Builder implements SimpleBuildStep {
     private static final Logger LOGGER = Logger.getLogger(ExecuteDslScripts.class.getName());
-
-    // Artifact of how Jelly/Stapler puts conditional variables in blocks, which NEED to map to a sub-Object.
-    // The alternative would have been to mess with DescriptorImpl.getInstance
-    @Deprecated
-    public static class ScriptLocation {
-        private Boolean usingScriptText;
-        private String targets;
-        private String scriptText;
-        private boolean ignoreMissingFiles;
-
-        @DataBoundConstructor
-        public ScriptLocation() {
-        }
-
-        @Deprecated
-        public ScriptLocation(String value, String targets, String scriptText) {
-            setValue(value);
-            setTargets(targets);
-            setScriptText(scriptText);
-        }
-
-        @DataBoundSetter
-        public void setValue(String value) {
-            this.usingScriptText = value == null || Boolean.parseBoolean(value);
-        }
-
-        @DataBoundSetter
-        public void setTargets(String targets) {
-            this.targets = fixEmptyAndTrim(targets);
-        }
-
-        @DataBoundSetter
-        public void setScriptText(String scriptText) {
-            this.scriptText = fixEmptyAndTrim(scriptText);
-            if (this.scriptText != null && this.usingScriptText == null) {
-                usingScriptText = true;
-            }
-        }
-
-        @DataBoundSetter
-        public void setIgnoreMissingFiles(boolean ignoreMissingFiles) {
-            this.ignoreMissingFiles = ignoreMissingFiles;
-        }
-    }
 
     /**
      * Newline-separated list of locations to load as dsl scripts.
@@ -148,40 +100,6 @@ public class ExecuteDslScripts extends Builder implements SimpleBuildStep {
 
     @DataBoundConstructor
     public ExecuteDslScripts() {
-    }
-
-    @Deprecated
-    public ExecuteDslScripts(ScriptLocation scriptLocation) {
-        setScriptLocation(scriptLocation);
-    }
-
-    @Deprecated
-    public ExecuteDslScripts(ScriptLocation scriptLocation, boolean ignoreExisting, RemovedJobAction removedJobAction,
-                             RemovedViewAction removedViewAction, LookupStrategy lookupStrategy,
-                             String additionalClasspath) {
-        this(scriptLocation);
-        this.ignoreExisting = ignoreExisting;
-        this.removedJobAction = removedJobAction;
-        this.removedViewAction = removedViewAction;
-        this.lookupStrategy = lookupStrategy == null ? LookupStrategy.JENKINS_ROOT : lookupStrategy;
-        this.additionalClasspath = additionalClasspath;
-    }
-
-    @Deprecated
-    public ExecuteDslScripts(ScriptLocation scriptLocation, boolean ignoreExisting, RemovedJobAction removedJobAction,
-                             LookupStrategy lookupStrategy) {
-        this(scriptLocation, ignoreExisting, removedJobAction, RemovedViewAction.IGNORE, lookupStrategy, null);
-    }
-
-    @Deprecated
-    public ExecuteDslScripts(ScriptLocation scriptLocation, boolean ignoreExisting, RemovedJobAction removedJobAction) {
-        this(scriptLocation, ignoreExisting, removedJobAction, LookupStrategy.JENKINS_ROOT);
-    }
-
-    @Deprecated
-    public ExecuteDslScripts(ScriptLocation scriptLocation, boolean ignoreExisting, RemovedJobAction removedJobAction,
-                             RemovedViewAction removedViewAction, LookupStrategy lookupStrategy) {
-        this(scriptLocation, ignoreExisting, removedJobAction, removedViewAction, lookupStrategy, null);
     }
 
     ExecuteDslScripts(String scriptText) {
@@ -304,25 +222,6 @@ public class ExecuteDslScripts extends Builder implements SimpleBuildStep {
         this.additionalClasspath = fixEmptyAndTrim(additionalClasspath);
     }
 
-    @Override
-    public Collection<? extends Action> getProjectActions(AbstractProject<?, ?> project) {
-        return Collections.singleton(new ApiViewerAction());
-    }
-
-    @Deprecated
-    public ScriptLocation getScriptLocation() {
-        return null;
-    }
-
-    @DataBoundSetter
-    @Deprecated
-    public void setScriptLocation(ScriptLocation scriptLocation) {
-        this.usingScriptText = scriptLocation == null || (scriptLocation.usingScriptText != null && scriptLocation.usingScriptText);
-        this.targets = scriptLocation == null ? null : scriptLocation.targets;
-        this.scriptText = scriptLocation == null ? null : scriptLocation.scriptText;
-        this.ignoreMissingFiles = scriptLocation != null && scriptLocation.ignoreMissingFiles;
-    }
-
     /**
      * Runs every job DSL script provided in the plugin configuration, which results in new /
      * updated Jenkins jobs. The created / updated jobs are reported in the build result.
@@ -349,7 +248,7 @@ public class ExecuteDslScripts extends Builder implements SimpleBuildStep {
                         getTargets(), isUsingScriptText(), getScriptText(), ignoreExisting, isIgnoreMissingFiles(), additionalClasspath
                 );
 
-                DslScriptLoader dslScriptLoader = new DslScriptLoader(jobManagement);
+                JenkinsDslScriptLoader dslScriptLoader = new JenkinsDslScriptLoader(jobManagement);
                 GeneratedItems generatedItems = dslScriptLoader.runScripts(scriptRequests);
                 Set<GeneratedJob> freshJobs = generatedItems.getJobs();
                 Set<GeneratedView> freshViews = generatedItems.getViews();

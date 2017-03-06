@@ -9,7 +9,6 @@ import groovy.util.XmlParser;
 import hudson.FilePath;
 import hudson.Plugin;
 import hudson.XmlFile;
-import hudson.model.AbstractBuild;
 import hudson.model.AbstractItem;
 import hudson.model.AbstractProject;
 import hudson.model.BuildableItem;
@@ -43,6 +42,7 @@ import org.custommonkey.xmlunit.Diff;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.jenkinsci.lib.configprovider.ConfigProvider;
 import org.jenkinsci.lib.configprovider.model.Config;
+import org.jenkinsci.plugins.configfiles.GlobalConfigFiles;
 import org.jenkinsci.plugins.vSphereCloud;
 
 import javax.xml.transform.Source;
@@ -66,6 +66,7 @@ import java.util.logging.Logger;
 import static hudson.model.Result.UNSTABLE;
 import static hudson.model.View.createViewFromXML;
 import static java.lang.String.format;
+import static java.util.UUID.randomUUID;
 import static javaposse.jobdsl.plugin.ConfigFileProviderHelper.createNewConfig;
 import static javaposse.jobdsl.plugin.ConfigFileProviderHelper.findConfig;
 import static javaposse.jobdsl.plugin.ConfigFileProviderHelper.findConfigProvider;
@@ -86,12 +87,6 @@ public class JenkinsJobManagement extends AbstractJobManagement {
     private boolean failOnMissingPlugin;
     private boolean unstableOnDeprecation;
 
-    @Deprecated
-    public JenkinsJobManagement(PrintStream outputLogger, Map<String, ?> envVars, AbstractBuild<?, ?> build,
-                                LookupStrategy lookupStrategy) {
-        this(outputLogger, envVars, build, build.getWorkspace(), lookupStrategy);
-    }
-
     public JenkinsJobManagement(PrintStream outputLogger, Map<String, ?> envVars, Run<?, ?> run,
                                 FilePath workspace, LookupStrategy lookupStrategy) {
         super(outputLogger);
@@ -100,11 +95,6 @@ public class JenkinsJobManagement extends AbstractJobManagement {
         this.workspace = workspace;
         this.project = run == null ? null : run.getParent();
         this.lookupStrategy = lookupStrategy;
-    }
-
-    @Deprecated
-    public JenkinsJobManagement(PrintStream outputLogger, Map<String, ?> envVars, AbstractBuild<?, ?> build) {
-        this(outputLogger, envVars, build, build.getWorkspace(), LookupStrategy.JENKINS_ROOT);
     }
 
     public JenkinsJobManagement(PrintStream outputLogger, Map<String, ?> envVars, File workspace) {
@@ -197,6 +187,7 @@ public class JenkinsJobManagement extends AbstractJobManagement {
     }
 
     @Override
+    @Deprecated
     public String createOrUpdateConfigFile(ConfigFile configFile, boolean ignoreExisting) {
         validateNameArg(configFile.getName());
 
@@ -214,20 +205,18 @@ public class JenkinsJobManagement extends AbstractJobManagement {
         }
 
         Config config = findConfig(configProvider, configFile.getName());
-        if (config == null) {
-            config = configProvider.newConfig();
-        } else if (ignoreExisting) {
+        if (config != null && ignoreExisting) {
             return config.id;
         }
 
-        config = createNewConfig(config, configFile);
+        config = createNewConfig(config == null ? randomUUID().toString() : config.id, configFile);
         if (config == null) {
             throw new DslException(
                     format(Messages.CreateOrUpdateConfigFile_UnknownConfigFileType(), configFile.getClass())
             );
         }
 
-        configProvider.save(config);
+        jenkins.getExtensionList(GlobalConfigFiles.class).get(GlobalConfigFiles.class).save(config);
         return config.id;
     }
 
@@ -356,7 +345,7 @@ public class JenkinsJobManagement extends AbstractJobManagement {
 
     @Override
     public void requireMinimumCoreVersion(String version) {
-        if (Jenkins.getVersion().isOlderThan(new VersionNumber(version))) {
+        if (!isMinimumCoreVersion(version)) {
             failOrMarkBuildAsUnstable("Jenkins needs to be updated to version " + version + " or later", false);
         }
     }
@@ -365,6 +354,11 @@ public class JenkinsJobManagement extends AbstractJobManagement {
     public boolean isMinimumPluginVersionInstalled(String pluginShortName, String version) {
         Plugin plugin = Jenkins.getInstance().getPlugin(pluginShortName);
         return plugin != null && !plugin.getWrapper().getVersionNumber().isOlderThan(new VersionNumber(version));
+    }
+
+    @Override
+    public boolean isMinimumCoreVersion(String version) {
+        return !Jenkins.getVersion().isOlderThan(new VersionNumber(version));
     }
 
     @Override
@@ -381,6 +375,7 @@ public class JenkinsJobManagement extends AbstractJobManagement {
     }
 
     @Override
+    @Deprecated
     public String getConfigFileId(ConfigFileType type, String name) {
         Jenkins jenkins = Jenkins.getInstance();
         if (jenkins.getPlugin("config-file-provider") != null) {
@@ -388,6 +383,7 @@ public class JenkinsJobManagement extends AbstractJobManagement {
             if (configProvider != null) {
                 Config config = findConfig(configProvider, name);
                 if (config != null) {
+                    logDeprecationWarning("finding managed config files by name");
                     return config.id;
                 }
             }
@@ -436,7 +432,11 @@ public class JenkinsJobManagement extends AbstractJobManagement {
         }
 
         try {
-            Object result = Iterables.getOnlyElement(candidates).call(getSession(item), this, args);
+            DslExtension extension = Iterables.getOnlyElement(candidates);
+            if (extension.isDeprecated()) {
+                logDeprecationWarning(name);
+            }
+            Object result = extension.call(getSession(item), this, args);
             return result == null ? NO_VALUE : new XmlParser().parseText(Items.XSTREAM2.toXML(result));
         } catch (InvocationTargetException e) {
             throw e.getCause();

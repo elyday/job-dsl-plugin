@@ -1,3 +1,202 @@
+## Migrating to 1.58
+
+### Config Files
+
+The syntax for creating config files is changing to allow new features. The methods `customConfigFile`,
+`mavenSettingsConfigFile`, `globalMavenSettingsConfigFile` and `managedScriptConfigFile` are
+[[deprecated|Deprecation-Policy]] and will be removed.
+
+Finding config files by name is also [[deprecated|Deprecation-Policy]] and will be removed. Names must not be unique so
+lookup by name can yield multiple results. Use the unique config ID instead.
+
+DSL prior to 1.58
+```groovy
+customConfigFile('ACME Settings') {
+    comment('Settings for ACME tools')
+    content(readFileFromWorkspace('acme/settings.json'))
+}
+
+mavenSettingsConfigFile('Company Settings') {
+    comment('Company Maven Settings')
+    content(readFileFromWorkspace('maven/settings.xml'))
+    replaceAll()
+    serverCredentials('company-A', 'company-A-maven-repository-credentials')
+    serverCredentials('company-B', 'company-B-maven-repository-credentials')
+}
+
+globalMavenSettingsConfigFile('Company Settings') {
+    comment('Company Maven Settings')
+    content(readFileFromWorkspace('maven/settings.xml'))
+    replaceAll()
+    serverCredentials('company-A', 'company-A-maven-repository-credentials')
+    serverCredentials('company-B', 'company-B-maven-repository-credentials')
+}
+
+managedScriptConfigFile('Example') {
+    comment('My script')
+    content('echo Hello $1 and $2')
+    arguments('NAME_1', 'NAME_2')
+}
+
+mavenJob('example-1') {
+    providedSettings('Company Settings')
+    providedGlobalSettings('Company Settings')
+}
+
+job('example-2') {
+    wrappers {
+        configFiles {
+            file('ACME Settings') {
+                variable('CONFIG_FILE')
+            }
+            mavenSettings('Company Settings') {
+                targetLocation('settings.xml')
+            }
+            globalMavenSettings('Company Settings') {
+                targetLocation('global-settings.xml')
+            }
+        }
+    }
+    steps {
+        managedScript('Example') {
+            arguments('foo', 'bar')
+        }
+        maven {
+            providedSettings('Company Settings')
+            providedGlobalSettings('Company Settings')
+        }
+    }
+}
+```
+
+DSL since 1.58
+```groovy
+configFiles {
+    customConfig
+        id('acme-settings')
+        name('ACME Settings') {
+        comment('Settings for ACME tools')
+        content(readFileFromWorkspace('acme/settings.json'))
+    }
+    mavenSettingsConfig
+        id('company-settings')
+        name('Company Settings')
+        comment('Company Maven Settings')
+        content(readFileFromWorkspace('maven/settings.xml'))
+        isReplaceAll(true)
+        serverCredentialMappings {
+            serverCredentialMapping {
+                serverId('company-A')
+                credentialsId('company-A-maven-repository-credentials')
+            }
+        }
+        serverCredentialMappings {
+            serverCredentialMapping {
+                serverId('company-B')
+                credentialsId('company-B-maven-repository-credentials')
+            }
+        }
+    }
+    globalMavenSettingsConfig {
+        id('global-company-settings')
+        name('Company Settings') {
+        comment('Company Maven Settings')
+        content(readFileFromWorkspace('maven/settings.xml'))
+        isReplaceAll()
+        serverCredentialMappings {
+            serverCredentialMapping {
+                serverId('company-A')
+                credentialsId('company-A-maven-repository-credentials')
+            }
+        }
+        serverCredentialMappings {
+            serverCredentialMapping {
+                serverId('company-B')
+                credentialsId('company-B-maven-repository-credentials')
+            }
+        }
+    }
+    scriptConfig {
+        id('example')
+        name('Example')
+        comment('My script')
+        content('echo Hello $1 and $2')
+        args {
+            arg {
+                name('NAME_1')
+            }
+            arg {
+                name('NAME_2')
+            }
+        }
+    }
+}
+
+mavenJob('example-1') {
+    providedSettings('company-settings')
+    providedGlobalSettings('global-company-settings')
+}
+
+job('example-2') {
+    wrappers {
+        configFiles {
+            file('acme-settings') {
+                variable('CONFIG_FILE')
+            }
+            mavenSettings('company-settings') {
+                targetLocation('settings.xml')
+            }
+            globalMavenSettings('global-company-settings') {
+                targetLocation('global-settings.xml')
+            }
+        }
+    }
+    steps {
+        managedScript('example') {
+            arguments('foo', 'bar')
+        }
+        maven {
+            providedSettings('company-settings')
+            providedGlobalSettings('global-company-settings')
+        }
+    }
+}
+```
+
+The classes `javaposse.jobdsl.dsl.Config`, `javaposse.jobdsl.dsl.ConfigFile`,
+`javaposse.jobdsl.dsl.MavenSettingsConfigFile`, `javaposse.jobdsl.dsl.ParametrizedConfigFile` and
+`javaposse.jobdsl.plugin.ConfigFileProviderHelper` as well as the methods `createOrUpdateConfigFile` and
+`getConfigFileId` in `javaposse.jobdsl.dsl.JobManagement` and it's implementing classes are
+[[deprecated|Deprecation-Policy]] and will be removed.
+
+### GitLab
+
+Support for versions older than 1.4.0 of the [GitLab Plugin](https://wiki.jenkins-ci.org/display/JENKINS/GitLab+Plugin)
+is [[deprecated|Deprecation-Policy]] and will be removed.
+
+## Migrating to 1.57
+
+### Rbenv
+
+Support for versions older than 0.0.17 of the [Rbenv Plugin](https://wiki.jenkins-ci.org/display/JENKINS/rbenv+plugin)
+is [[deprecated|Deprecation-Policy]] and will be removed.
+
+## Migrating to 1.56
+
+### SSH Agent
+
+Support for versions older than 1.5 of the
+[SSH Agent Plugin](https://wiki.jenkins-ci.org/display/JENKINS/SSH+Agent+Plugin) is [[deprecated|Deprecation-Policy]]
+and will be removed.
+
+## Migrating to 1.55
+
+### ScriptRequest
+
+Some constructors and the `location` property in `javaposse.jobdsl.dsl.ScriptRequest` are
+[[deprecated|Deprecation-Policy]] and will be removed. The `body` and `scriptPath` properties should be used instead.
+The class is part of the internal implementation and should not affect DSL scripts.
+
 ## Migrating to 1.54
 
 ### Embedded API Viewer
@@ -64,6 +263,12 @@ job('example') {
 
 Support for versions older than 0.10.0 of the
 [Delivery Pipeline Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Delivery+Pipeline+Plugin) is
+[[deprecated|Deprecation-Policy]] and will be removed.
+
+### GitHub Branch Source
+
+Support for versions older than 1.8 of the
+[GitHub Branch Source Plugin](https://wiki.jenkins-ci.org/display/JENKINS/GitHub+Branch+Source+Plugin) is
 [[deprecated|Deprecation-Policy]] and will be removed.
 
 ### JobDslPlugin
@@ -230,7 +435,7 @@ Support for versions older than 0.6 of the [RVM Plugin](https://wiki.jenkins-ci.
 
 ### Ruby Runtime
 
-Support for versions older than 0.13 of the
+Support for versions older than 0.12 of the
 [Ruby Runtime Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Ruby+Runtime+Plugin) is
 [[deprecated|Deprecation-Policy]] and will be removed.
 

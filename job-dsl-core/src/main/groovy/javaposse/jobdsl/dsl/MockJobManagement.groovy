@@ -31,6 +31,7 @@ abstract class MockJobManagement extends AbstractJobManagement {
     }
 
     @Override
+    @Deprecated
     String createOrUpdateConfigFile(ConfigFile configFile, boolean ignoreExisting) {
         throw new UnsupportedOperationException()
     }
@@ -71,11 +72,17 @@ abstract class MockJobManagement extends AbstractJobManagement {
     }
 
     @Override
+    boolean isMinimumCoreVersion(String version) {
+        false
+    }
+
+    @Override
     Integer getVSphereCloudHash(String name) {
         null
     }
 
     @Override
+    @Deprecated
     String getConfigFileId(ConfigFileType type, String name) {
         null
     }

@@ -26,7 +26,81 @@ organize a SCM repository for Job DSL scripts, including [[tests for DSL scripts
 Browse the Jenkins issue tracker to see any [open issues](https://issues.jenkins-ci.org/issues/?filter=15140).
 
 ## Release Notes
-* 1.54 (unreleased)
+* 1.59 (unreleased)
+ * Enable [[Automatically Generated DSL]] for
+   [Parameterized Trigger Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Parameterized+Trigger+Plugin)
+   ([JENKINS-41741](https://issues.jenkins-ci.org/browse/JENKINS-41741))
+ * Log deprecation warnings for [[Automatically Generated DSL]] and DSL extensions
+ * Updated the troubleshooting section for [[The Configure Block]]
+   ([JENKINS-41958](https://issues.jenkins-ci.org/browse/JENKINS-41958))
+ * Updated [Structs Plugin](https://github.com/jenkinsci/structs-plugin) dependency to version 1.6
+* 1.58 (February 16 2017)
+ * Increased the minimum supported Jenkins version to 1.651
+ * Added support for the
+   [GitHub Branch Source Plugin](https://wiki.jenkins-ci.org/display/JENKINS/GitHub+Branch+Source+Plugin)
+   ([JENKINS-39977](https://issues.jenkins-ci.org/browse/JENKINS-39977))
+ * Enhanced support for
+   [Config File Provider Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Config+File+Provider+Plugin)
+   ([JENKINS-33630](https://issues.jenkins-ci.org/browse/JENKINS-33630),
+   [JENKINS-39754](https://issues.jenkins-ci.org/browse/JENKINS-39754),
+   [JENKINS-40719](https://issues.jenkins-ci.org/browse/JENKINS-40719))
+ * Enhanced support for the [GitLab Plugin](https://wiki.jenkins-ci.org/display/JENKINS/GitLab+Plugin)
+   ([JENKINS-41485](https://issues.jenkins-ci.org/browse/JENKINS-41485),
+   [JENKINS-41789](https://issues.jenkins-ci.org/browse/JENKINS-41789))
+ * Fixed a problem with the plugin's dependencies 
+  ([JENKINS-41001](https://issues.jenkins-ci.org/browse/JENKINS-41001))
+ * Fixed a problem with Windows paths on Unix
+  ([JENKINS-41612](https://issues.jenkins-ci.org/browse/JENKINS-41612))
+ * Improved error message for invalid enum values
+  ([JENKINS-41270](https://issues.jenkins-ci.org/browse/JENKINS-41270))
+ * Show only one link to embedded API viewer
+  ([JENKINS-41083](https://issues.jenkins-ci.org/browse/JENKINS-41083))
+ * The syntax for creating config files is changing, see [Migration](Migration#migrating-to-158)
+ * Most classes and related methods for creating config files are deprecated, see
+   [Migration](Migration#migrating-to-158)
+ * Support for the older versions of the [GitLab Plugin](https://wiki.jenkins-ci.org/display/JENKINS/GitLab+Plugin) is
+   deprecated, see [Migration](Migration#migrating-to-158)
+ * Removed anything that has been deprecated in 1.49, see [Migration](Migration#migrating-to-149)
+* 1.57 (January 15 2017)
+ * Updated optional
+   [Config File Provider Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Config+File+Provider+Plugin) dependency to
+   version 2.15.4
+   ([JENKINS-40943](https://issues.jenkins-ci.org/browse/JENKINS-40943))
+ * Allow `DashboardPortletContext` to be extended
+   ([#981](https://github.com/jenkinsci/job-dsl-plugin/pull/981))
+ * Show more available method signatures in embedded API viewer
+   ([#982](https://github.com/jenkinsci/job-dsl-plugin/pull/982))
+ * Fixed compatibility issue with [Ruby Runtime Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Ruby+Runtime+Plugin)
+   ([JENKINS-39193](https://issues.jenkins-ci.org/browse/JENKINS-39193),
+   [JENKINS-39807](https://issues.jenkins-ci.org/browse/JENKINS-39807))
+ * Version 0.12 of the [Ruby Runtime Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Ruby+Runtime+Plugin) is no
+   longer deprecated since 0.13 has several issues
+   ([JENKINS-37353](https://issues.jenkins-ci.org/browse/JENKINS-37353),
+   [JENKINS-37771](https://issues.jenkins-ci.org/browse/JENKINS-37771),
+   [JENKINS-38145](https://issues.jenkins-ci.org/browse/JENKINS-38145))
+ * Support for the older versions of the [Rbenv Plugin](https://wiki.jenkins-ci.org/display/JENKINS/rbenv+plugin) is
+   deprecated, see [Migration](Migration#migrating-to-157)
+* 1.56 (January 06 2017)
+ * Fixed support for
+   [Config File Provider Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Config+File+Provider+Plugin)
+   ([JENKINS-40797](https://issues.jenkins-ci.org/browse/JENKINS-40797))
+ * Enhanced support for the [Extra Columns Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Extra+Columns+Plugin)
+   ([#978](https://github.com/jenkinsci/job-dsl-plugin/pull/978))
+ * Enhanced support for the [SSH Agent Plugin](https://wiki.jenkins-ci.org/display/JENKINS/SSH+Agent+Plugin)
+   ([#980](https://github.com/jenkinsci/job-dsl-plugin/pull/980))
+ * Support for the older versions of the
+   [SSH Agent Plugin](https://wiki.jenkins-ci.org/display/JENKINS/SSH+Agent+Plugin) is deprecated,
+   see [Migration](Migration#migrating-to-156)
+* 1.55 (January 03 2017)
+ * Updated optional
+   [Config File Provider Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Config+File+Provider+Plugin) dependency to
+   version 2.15
+   ([JENKINS-39769](https://issues.jenkins-ci.org/browse/JENKINS-39769))
+ * Updated optional [Managed Scripts Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Managed+Script+Plugin)
+   dependency to version 1.3
+ * Use Groovy Shell instead of Groovy Script Engine to run DSL scripts, see [Migration](Migration#migrating-to-155)
+   ([#976](https://github.com/jenkinsci/job-dsl-plugin/pull/976))
+* 1.54 (December 24 2016)
  * Enhanced support for the [S3 Plugin](https://wiki.jenkins-ci.org/display/JENKINS/S3+Plugin)
    ([#953](https://github.com/jenkinsci/job-dsl-plugin/pull/953))
  * Enhanced support for the
@@ -34,17 +108,36 @@ Browse the Jenkins issue tracker to see any [open issues](https://issues.jenkins
    ([#956](https://github.com/jenkinsci/job-dsl-plugin/pull/956))
  * Enhanced support for the [Git Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Git+Plugin)
    ([#958](https://github.com/jenkinsci/job-dsl-plugin/pull/958))
+ * Enhanced support for the
+   [GitHub Branch Source Plugin](https://wiki.jenkins-ci.org/display/JENKINS/GitHub+Branch+Source+Plugin)
+   ([#969](https://github.com/jenkinsci/job-dsl-plugin/pull/969))
+ * Enhanced support for the
+   [PostBuildScript Plugin](https://wiki.jenkins-ci.org/display/JENKINS/PostBuildScript+Plugin)
+   ([#973](https://github.com/jenkinsci/job-dsl-plugin/pull/973))
+ * Enhanced support for the Maven build step
+   ([JENKINS-40636](https://issues.jenkins-ci.org/browse/JENKINS-40636))
  * Changed embedded API Viewer to work without Internet connectivity
    ([JENKINS-40205](https://issues.jenkins-ci.org/browse/JENKINS-40205))
- * The short URL for the embedded API Viewer ()http://localhost:8080/plugin/job-dsl/api-viewer) is deprecated, see
-    [Migration](Migration#migrating-to-154)
+ * Improved error message when a plugin is missing
+   ([JENKINS-40601](https://issues.jenkins-ci.org/browse/JENKINS-40601)) 
+ * The short URL for the embedded API Viewer (http://localhost:8080/plugin/job-dsl/api-viewer) is deprecated, see
+   [Migration](Migration#migrating-to-154)
+ * Fixed problem with
+   [GitHub Branch Source Plugin](https://wiki.jenkins-ci.org/display/JENKINS/GitHub+Branch+Source+Plugin)
+   ([JENKINS-40191](https://issues.jenkins-ci.org/browse/JENKINS-40191))
+ * Added a workaround for a problem with XStream conversion
+   ([JENKINS-40130](https://issues.jenkins-ci.org/browse/JENKINS-40130))
  * Support for the [S3 Plugin](https://wiki.jenkins-ci.org/display/JENKINS/S3+Plugin) is deprecated, see
    [Migration](Migration#migrating-to-154)
  * Support for the older versions of the
    [Delivery Pipeline Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Delivery+Pipeline+Plugin) is deprecated, see
    [Migration](Migration#migrating-to-154)
+ * Support for the older versions of the
+   [GitHub Branch Source Plugin](https://wiki.jenkins-ci.org/display/JENKINS/GitHub+Branch+Source+Plugin) is deprecated,
+   see [Migration](Migration#migrating-to-154)
  * The class `javaposse.jobdsl.plugin.JobDslPlugin` is deprecated, see [Migration](Migration#migrating-to-154)
  * Removed most things that have been deprecated in 1.47, see [Migration](Migration#migrating-to-147)
+ * Removed anything that has been deprecated in 1.48, see [Migration](Migration#migrating-to-148)
 * 1.53 (November 08 2016)
  * Enhanced support the
    [Config File Provider Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Config+File+Provider+Plugin)
