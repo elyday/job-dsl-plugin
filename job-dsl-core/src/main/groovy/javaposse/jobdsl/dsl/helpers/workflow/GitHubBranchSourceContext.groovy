@@ -5,6 +5,7 @@ import javaposse.jobdsl.dsl.JobManagement
 import javaposse.jobdsl.dsl.RequiresPlugin
 
 class GitHubBranchSourceContext extends AbstractContext {
+    String id = UUID.randomUUID()
     String apiUri
     String scanCredentialsId
     String checkoutCredentialsId = 'SAME'
@@ -21,6 +22,15 @@ class GitHubBranchSourceContext extends AbstractContext {
 
     GitHubBranchSourceContext(JobManagement jobManagement) {
         super(jobManagement)
+    }
+
+    /**
+     * Specifies a unique ID for this branch source.
+     *
+     * @since 1.62
+     */
+    void id(String id) {
+        this.id = id
     }
 
     /**
@@ -130,13 +140,5 @@ class GitHubBranchSourceContext extends AbstractContext {
     @RequiresPlugin(id = 'github-branch-source', minimumVersion = '1.8')
     void buildForkPRHead(boolean buildForkPRHead = true) {
         this.buildForkPRHead = buildForkPRHead
-    }
-
-    /**
-     * If set, ignores push notifications. Defaults to {@code false}.
-     */
-    @SuppressWarnings(['GroovyUnusedDeclaration', 'EmptyMethod'])
-    @Deprecated
-    void ignoreOnPushNotifications(boolean ignoreOnPushNotifications = true) {
     }
 }

@@ -1417,7 +1417,7 @@ class PublisherContextSpec extends Specification {
         second.configs[0].'hudson.plugins.parameterizedtrigger.CurrentBuildParameters'[0] instanceof Node
 
         1 * jobManagement.requireMinimumPluginVersion('parameterized-trigger', '2.26')
-        1 * jobManagement.requireMinimumPluginVersion('git', '2.2.6')
+        1 * jobManagement.requireMinimumPluginVersion('git', '2.5.3')
 
         when:
         context.downstreamParameterized {
@@ -2517,8 +2517,7 @@ class PublisherContextSpec extends Specification {
         context.publisherNodes[0].pushMerge[0].value() == false
         context.publisherNodes[0].pushOnlyIfSuccess[0].value() == false
         context.publisherNodes[0].forcePush[0].value() == false
-        1 * jobManagement.requireMinimumPluginVersion('git', '2.2.6')
-        1 * jobManagement.logPluginDeprecationWarning('git', '2.5.3')
+        1 * jobManagement.requireMinimumPluginVersion('git', '2.5.3')
     }
 
     def 'call git with all options'() {
@@ -2559,8 +2558,7 @@ class PublisherContextSpec extends Specification {
                 branchName[0].value() == 'master'
             }
         }
-        1 * jobManagement.requireMinimumPluginVersion('git', '2.2.6')
-        1 * jobManagement.logPluginDeprecationWarning('git', '2.5.3')
+        1 * jobManagement.requireMinimumPluginVersion('git', '2.5.3')
     }
 
     def 'call git with minimal tag options'() {
@@ -2587,8 +2585,7 @@ class PublisherContextSpec extends Specification {
                 updateTag[0].value() == false
             }
         }
-        1 * jobManagement.requireMinimumPluginVersion('git', '2.2.6')
-        1 * jobManagement.logPluginDeprecationWarning('git', '2.5.3')
+        1 * jobManagement.requireMinimumPluginVersion('git', '2.5.3')
     }
 
     def 'call git without tag targetRepoName'() {
@@ -2971,6 +2968,7 @@ class PublisherContextSpec extends Specification {
         context.publisherNodes.size() == 1
         with(context.publisherNodes[0]) {
             name() == 'org.jenkinsci.plugins.stashNotifier.StashNotifier'
+            children().size() == 6
             stashServerBaseUrl[0].value().empty
             stashUserName[0].value().empty
             stashUserPassword[0].value().empty
@@ -2979,13 +2977,16 @@ class PublisherContextSpec extends Specification {
             includeBuildNumberInKey[0].value() == false
         }
         1 * jobManagement.requirePlugin('stashNotifier')
+        1 * jobManagement.logPluginDeprecationWarning('stashNotifier', '1.11.6')
     }
 
     def 'stashNotifier with configuration of all parameters'() {
         when:
         context.stashNotifier {
+            serverBaseUrl('test')
             commitSha1('sha1')
             keepRepeatedBuilds(true)
+            ignoreUnverifiedSSLCertificates(true)
         }
 
         then:
@@ -2993,21 +2994,25 @@ class PublisherContextSpec extends Specification {
         context.publisherNodes.size() == 1
         with(context.publisherNodes[0]) {
             name() == 'org.jenkinsci.plugins.stashNotifier.StashNotifier'
-            stashServerBaseUrl[0].value().empty
+            children().size() == 6
+            stashServerBaseUrl[0].value() == 'test'
             stashUserName[0].value().empty
             stashUserPassword[0].value().empty
-            ignoreUnverifiedSSLPeer[0].value() == false
+            ignoreUnverifiedSSLPeer[0].value() == true
             commitSha1[0].value() == 'sha1'
             includeBuildNumberInKey[0].value() == true
         }
         1 * jobManagement.requirePlugin('stashNotifier')
+        1 * jobManagement.logPluginDeprecationWarning('stashNotifier', '1.11.6')
     }
 
     def 'stashNotifier with configuration of all parameters using defaults for boolean parameter'() {
         when:
         context.stashNotifier {
+            serverBaseUrl('test')
             commitSha1('sha1')
             keepRepeatedBuilds()
+            ignoreUnverifiedSSLCertificates()
         }
 
         then:
@@ -3015,14 +3020,70 @@ class PublisherContextSpec extends Specification {
         context.publisherNodes.size() == 1
         with(context.publisherNodes[0]) {
             name() == 'org.jenkinsci.plugins.stashNotifier.StashNotifier'
-            stashServerBaseUrl[0].value().empty
+            children().size() == 6
+            stashServerBaseUrl[0].value() == 'test'
             stashUserName[0].value().empty
             stashUserPassword[0].value().empty
-            ignoreUnverifiedSSLPeer[0].value() == false
+            ignoreUnverifiedSSLPeer[0].value() == true
             commitSha1[0].value() == 'sha1'
             includeBuildNumberInKey[0].value() == true
         }
         1 * jobManagement.requirePlugin('stashNotifier')
+        1 * jobManagement.logPluginDeprecationWarning('stashNotifier', '1.11.6')
+    }
+
+    def 'stashNotifier with default configuration and plugin version 1.9.0'() {
+        setup:
+        jobManagement.isMinimumPluginVersionInstalled('stashNotifier', '1.9.0') >> true
+
+        when:
+        context.stashNotifier {
+        }
+
+        then:
+        context.publisherNodes != null
+        context.publisherNodes.size() == 1
+        with(context.publisherNodes[0]) {
+            name() == 'org.jenkinsci.plugins.stashNotifier.StashNotifier'
+            children().size() == 5
+            stashServerBaseUrl[0].value().empty
+            credentialsId[0].value().empty
+            ignoreUnverifiedSSLPeer[0].value() == false
+            commitSha1[0].value() == ''
+            includeBuildNumberInKey[0].value() == false
+        }
+        1 * jobManagement.requirePlugin('stashNotifier')
+        1 * jobManagement.logPluginDeprecationWarning('stashNotifier', '1.11.6')
+    }
+
+    def 'stashNotifier with configuration of all parameters and plugin version 1.9.0'() {
+        setup:
+        jobManagement.isMinimumPluginVersionInstalled('stashNotifier', '1.9.0') >> true
+
+        when:
+        context.stashNotifier {
+            serverBaseUrl('test')
+            credentialsId('foo')
+            commitSha1('sha1')
+            keepRepeatedBuilds(true)
+            ignoreUnverifiedSSLCertificates(true)
+        }
+
+        then:
+        context.publisherNodes != null
+        context.publisherNodes.size() == 1
+        with(context.publisherNodes[0]) {
+            name() == 'org.jenkinsci.plugins.stashNotifier.StashNotifier'
+            children().size() == 5
+            stashServerBaseUrl[0].value() == 'test'
+            credentialsId[0].value() == 'foo'
+            ignoreUnverifiedSSLPeer[0].value() == true
+            commitSha1[0].value() == 'sha1'
+            includeBuildNumberInKey[0].value() == true
+        }
+        1 * jobManagement.requirePlugin('stashNotifier')
+        1 * jobManagement.requireMinimumPluginVersion('stashNotifier', '1.9.0')
+        1 * jobManagement.logPluginDeprecationWarning('stashNotifier', '1.11.6')
     }
 
     def 'mavenDeploymentLinker with regex'() {
@@ -3147,120 +3208,6 @@ class PublisherContextSpec extends Specification {
             externalDelete[0].value() == 'rm'
         }
         1 * jobManagement.requirePlugin('ws-cleanup')
-    }
-
-    def 'call rundeck with invalid jobId should fail'() {
-        when:
-        context.rundeck(id)
-
-        then:
-        Exception exception = thrown(DslScriptException)
-        exception.message =~ /\(.+, line \d+\) jobIdentifier cannot be null or empty/
-
-        where:
-        id << [null, '']
-    }
-
-    def 'call rundeck with all args should create valid rundeck node'() {
-        when:
-        context.rundeck('jobId') {
-            options(key1: 'value1', key2: 'value2')
-            options(key4: 'value4')
-            option('key3', 'value3')
-            nodeFilters(key1: 'value1', key2: 'value2')
-            nodeFilters(key4: 'value4')
-            nodeFilter('key3', 'value3')
-            tag('tag')
-            shouldWaitForRundeckJob()
-            shouldFailTheBuild()
-            includeRundeckLogs()
-        }
-
-        then:
-        with(context.publisherNodes[0]) {
-            name() == 'org.jenkinsci.plugins.rundeck.RundeckNotifier'
-            children().size() == 7
-            jobId[0].value() == 'jobId'
-            options[0].value() == 'key1=value1\nkey2=value2\nkey4=value4\nkey3=value3'
-            nodeFilters[0].value() == 'key1=value1\nkey2=value2\nkey4=value4\nkey3=value3'
-            tag[0].value() == 'tag'
-            shouldWaitForRundeckJob[0].value() == true
-            shouldFailTheBuild[0].value() == true
-            includeRundeckLogs[0].value() == true
-        }
-        1 * jobManagement.requireMinimumPluginVersion('rundeck', '3.4')
-        1 * jobManagement.logDeprecationWarning()
-    }
-
-    def 'call rundeck with default values'() {
-        when:
-        context.rundeck('jobId')
-
-        then:
-        with(context.publisherNodes[0]) {
-            name() == 'org.jenkinsci.plugins.rundeck.RundeckNotifier'
-            children().size() == 7
-            jobId[0].value() == 'jobId'
-            options[0].value().isEmpty()
-            nodeFilters[0].value().isEmpty()
-            tag[0].value() == ''
-            shouldWaitForRundeckJob[0].value() == false
-            shouldFailTheBuild[0].value() == false
-            includeRundeckLogs[0].value() == false
-        }
-        1 * jobManagement.requireMinimumPluginVersion('rundeck', '3.4')
-        1 * jobManagement.logDeprecationWarning()
-    }
-
-    def 'call rundeck with rundeckInstance selected (version 3.5.4)'() {
-        setup:
-        jobManagement.isMinimumPluginVersionInstalled('rundeck', '3.5.4') >> true
-
-        when:
-        context.rundeck('jobId') {
-            rundeckInstance('myRundeckInstance')
-        }
-
-        then:
-        with(context.publisherNodes[0]) {
-            name() == 'org.jenkinsci.plugins.rundeck.RundeckNotifier'
-            children().size() == 8
-            jobId[0].value() == 'jobId'
-            options[0].value().isEmpty()
-            nodeFilters[0].value().isEmpty()
-            tag[0].value() == ''
-            shouldWaitForRundeckJob[0].value() == false
-            shouldFailTheBuild[0].value() == false
-            includeRundeckLogs[0].value() == false
-            rundeckInstance[0].value() == 'myRundeckInstance'
-        }
-        1 * jobManagement.requireMinimumPluginVersion('rundeck', '3.4')
-        1 * jobManagement.requireMinimumPluginVersion('rundeck', '3.5.4')
-        1 * jobManagement.logDeprecationWarning()
-    }
-
-    def 'call rundeck without rundeckInstance selected (version 3.5.4)'() {
-        setup:
-        jobManagement.isMinimumPluginVersionInstalled('rundeck', '3.5.4') >> true
-
-        when:
-        context.rundeck('jobId')
-
-        then:
-        with(context.publisherNodes[0]) {
-            name() == 'org.jenkinsci.plugins.rundeck.RundeckNotifier'
-            children().size() == 8
-            jobId[0].value() == 'jobId'
-            options[0].value().isEmpty()
-            nodeFilters[0].value().isEmpty()
-            tag[0].value() == ''
-            shouldWaitForRundeckJob[0].value() == false
-            shouldFailTheBuild[0].value() == false
-            includeRundeckLogs[0].value() == false
-            rundeckInstance[0].value() == 'Default'
-        }
-        1 * jobManagement.requireMinimumPluginVersion('rundeck', '3.4')
-        1 * jobManagement.logDeprecationWarning()
     }
 
     def 'call s3 without profile'(String profile) {
@@ -3725,6 +3672,7 @@ class PublisherContextSpec extends Specification {
             markBuildUnstable[0].value() == false
         }
         1 * jobManagement.requireMinimumPluginVersion('postbuildscript', '0.17')
+        1 * jobManagement.logDeprecationWarning()
     }
 
     def 'call post build scripts with all options'() {
@@ -3749,6 +3697,7 @@ class PublisherContextSpec extends Specification {
             markBuildUnstable[0].value() == value
         }
         1 * jobManagement.requireMinimumPluginVersion('postbuildscript', '0.17')
+        1 * jobManagement.logDeprecationWarning()
 
         where:
         value << [true, false]
@@ -3774,6 +3723,7 @@ class PublisherContextSpec extends Specification {
             executeOn[0].value() == 'BOTH'
         }
         1 * jobManagement.requireMinimumPluginVersion('postbuildscript', '0.17')
+        1 * jobManagement.logDeprecationWarning()
     }
 
     def 'call post build scripts with all options and matrix job'() {
@@ -3804,6 +3754,7 @@ class PublisherContextSpec extends Specification {
             executeOn[0].value() == mode
         }
         1 * jobManagement.requireMinimumPluginVersion('postbuildscript', '0.17')
+        1 * jobManagement.logDeprecationWarning()
 
         where:
         mode << ['MATRIX', 'AXES', 'BOTH']
@@ -4666,51 +4617,6 @@ class PublisherContextSpec extends Specification {
         1 * jobManagement.requireMinimumPluginVersion('naginator', '1.15')
     }
 
-    def 'mergePullRequest with no options'() {
-        when:
-        context.mergePullRequest()
-
-        then:
-        with(context.publisherNodes[0]) {
-            name() == 'org.jenkinsci.plugins.ghprb.GhprbPullRequestMerge'
-            children().size() == 6
-            mergeComment[0].value() == ''
-            onlyTriggerPhrase[0].value() == false
-            onlyAdminsMerge[0].value() == false
-            disallowOwnCode[0].value() == false
-            failOnNonMerge[0].value() == false
-            deleteOnMerge[0].value() == false
-        }
-        1 * jobManagement.requireMinimumPluginVersion('ghprb', '1.26')
-        1 * jobManagement.logDeprecationWarning()
-    }
-
-    def 'mergePullRequest with all options'() {
-        when:
-        context.mergePullRequest {
-            mergeComment('Test comment')
-            onlyTriggerPhrase()
-            onlyAdminsMerge()
-            disallowOwnCode()
-            failOnNonMerge()
-            deleteOnMerge()
-        }
-
-        then:
-        with(context.publisherNodes[0]) {
-            name() == 'org.jenkinsci.plugins.ghprb.GhprbPullRequestMerge'
-            children().size() == 6
-            mergeComment[0].value() == 'Test comment'
-            onlyTriggerPhrase[0].value() == true
-            onlyAdminsMerge[0].value() == true
-            disallowOwnCode[0].value() == true
-            failOnNonMerge[0].value() == true
-            deleteOnMerge[0].value() == true
-        }
-        1 * jobManagement.requireMinimumPluginVersion('ghprb', '1.26')
-        1 * jobManagement.logDeprecationWarning()
-    }
-
     def 'publishBuild with no options'() {
         when:
         context.publishBuild()
@@ -4816,6 +4722,7 @@ class PublisherContextSpec extends Specification {
             includeCustomMessage[0].value() == false
         }
         1 * jobManagement.requireMinimumPluginVersion('mattermost', '1.5.0')
+        1 * jobManagement.logDeprecationWarning()
     }
 
     def 'mattermost notification with all options'() {
@@ -4858,6 +4765,7 @@ class PublisherContextSpec extends Specification {
             includeCustomMessage[0].value() == true
         }
         1 * jobManagement.requireMinimumPluginVersion('mattermost', '1.5.0')
+        1 * jobManagement.logDeprecationWarning()
     }
 
     def 'call publishOverSsh without server'() {
@@ -5132,6 +5040,7 @@ class PublisherContextSpec extends Specification {
             evenIfDownstreamUnstable[0].value() == false
         }
         1 * jobManagement.requireMinimumPluginVersion('join', '1.15')
+        1 * jobManagement.logPluginDeprecationWarning('join', '1.21')
     }
 
     def 'joinTrigger with all options'() {
@@ -5164,6 +5073,76 @@ class PublisherContextSpec extends Specification {
             evenIfDownstreamUnstable[0].value() == true
         }
         1 * jobManagement.requireMinimumPluginVersion('join', '1.15')
+        1 * jobManagement.logPluginDeprecationWarning('join', '1.21')
+    }
+
+    def 'joinTrigger with no options and plugin version 1.20'() {
+        setup:
+        jobManagement.isMinimumPluginVersionInstalled('join', '1.20') >> true
+
+        when:
+        context.joinTrigger {
+        }
+
+        then:
+        with(context.publisherNodes[0]) {
+            name() == 'join.JoinTrigger'
+            children().size() == 3
+            joinProjects[0].value() == ''
+            joinPublishers[0].value().empty
+            with(resultThreshold[0]) {
+                children().size() == 4
+                name[0].value() == 'SUCCESS'
+                ordinal[0].value() == 0
+                color[0].value() == 'BLUE'
+                completeBuild[0].value() == true
+            }
+        }
+        1 * jobManagement.requireMinimumPluginVersion('join', '1.15')
+        1 * jobManagement.logPluginDeprecationWarning('join', '1.21')
+    }
+
+    def 'joinTrigger with all options and plugin version 1.20'() {
+        setup:
+        jobManagement.isMinimumPluginVersionInstalled('join', '1.20') >> true
+
+        when:
+        context.joinTrigger {
+            projects('one')
+            projects('two', 'three')
+            publishers {
+                downstreamParameterized {
+                    trigger('upload-to-staging') {
+                        parameters {
+                            currentBuild()
+                        }
+                    }
+                }
+            }
+            resultThreshold('FAILURE')
+        }
+
+        then:
+        with(context.publisherNodes[0]) {
+            name() == 'join.JoinTrigger'
+            children().size() == 3
+            joinProjects[0].value() == 'one, two, three'
+            with(joinPublishers[0]) {
+                children().size() == 1
+                children()[0].name() == 'hudson.plugins.parameterizedtrigger.BuildTrigger'
+                children()[0].children().size() == 1
+            }
+            with(resultThreshold[0]) {
+                children().size() == 4
+                name[0].value() == 'FAILURE'
+                ordinal[0].value() == 2
+                color[0].value() == 'RED'
+                completeBuild[0].value() == true
+            }
+        }
+        1 * jobManagement.requireMinimumPluginVersion('join', '1.15')
+        1 * jobManagement.requireMinimumPluginVersion('join', '1.20')
+        1 * jobManagement.logPluginDeprecationWarning('join', '1.21')
     }
 
     def 'joinTrigger with unsupported publisher'() {
@@ -5176,75 +5155,6 @@ class PublisherContextSpec extends Specification {
 
         then:
         thrown(DslScriptException)
-    }
-
-    def 'slackNotifications with no options'() {
-        when:
-        context.slackNotifications {}
-
-        then:
-        context.publisherNodes[0].name() == 'jenkins.plugins.slack.SlackNotifier'
-        with(item.node.'properties'.'jenkins.plugins.slack.SlackNotifier_-SlackJobProperty') {
-            teamDomain.text() == ''
-            token.text() == ''
-            room.text() == ''
-            startNotification.text() == 'false'
-            notifySuccess.text() == 'false'
-            notifyAborted.text() == 'false'
-            notifyNotBuilt.text() == 'false'
-            notifyUnstable.text() == 'false'
-            notifyFailure.text() == 'false'
-            notifyBackToNormal.text() == 'false'
-            notifyRepeatedFailure.text() == 'false'
-            includeTestSummary.text() == 'false'
-            showCommitList.text() == 'false'
-            includeCustomMessage.text() == 'false'
-            customMessage.text() == ''
-        }
-        1 * jobManagement.requireMinimumPluginVersion('slack', '1.8')
-        1 * jobManagement.logDeprecationWarning()
-    }
-
-    def 'slackNotifications with all options'() {
-        when:
-        context.slackNotifications {
-            teamDomain('testdomain')
-            integrationToken('token1')
-            projectChannel('channel1')
-            notifyBuildStart()
-            notifyAborted()
-            notifyFailure()
-            notifyNotBuilt()
-            notifySuccess()
-            notifyUnstable()
-            notifyBackToNormal()
-            notifyRepeatedFailure()
-            includeTestSummary()
-            showCommitList()
-            customMessage('testing customMessage')
-        }
-
-        then:
-        context.publisherNodes[0].name() == 'jenkins.plugins.slack.SlackNotifier'
-        with(item.node.'properties'.'jenkins.plugins.slack.SlackNotifier_-SlackJobProperty') {
-            teamDomain.text() == 'testdomain'
-            token.text() == 'token1'
-            room.text() == 'channel1'
-            startNotification.text() == 'true'
-            notifySuccess.text() == 'true'
-            notifyAborted.text() == 'true'
-            notifyNotBuilt.text() == 'true'
-            notifyUnstable.text() == 'true'
-            notifyFailure.text() == 'true'
-            notifyBackToNormal.text() == 'true'
-            notifyRepeatedFailure.text() == 'true'
-            includeTestSummary.text() == 'true'
-            showCommitList.text() == 'true'
-            includeCustomMessage.text() == 'true'
-            customMessage.text() == 'testing customMessage'
-        }
-        1 * jobManagement.requireMinimumPluginVersion('slack', '1.8')
-        1 * jobManagement.logDeprecationWarning()
     }
 
     def 'debianPackage with no options'() {
@@ -5310,6 +5220,7 @@ class PublisherContextSpec extends Specification {
             entries[0].value().empty
         }
         1 * jobManagement.requireMinimumPluginVersion('artifactdeployer', '0.33')
+        1 * jobManagement.logDeprecationWarning()
     }
 
     def 'call artifactDeployer with all options'() {
@@ -5368,6 +5279,7 @@ class PublisherContextSpec extends Specification {
             }
         }
         1 * jobManagement.requireMinimumPluginVersion('artifactdeployer', '0.33')
+        1 * jobManagement.logDeprecationWarning()
     }
 
     def 'slocCount with no options'() {
@@ -5427,6 +5339,7 @@ class PublisherContextSpec extends Specification {
             tagDeleteComment[0].value() == 'Delete old tag by svn-tag Jenkins plugin.'
         }
         1 * jobManagement.requireMinimumPluginVersion('svn-tag', '1.18')
+        1 * jobManagement.logDeprecationWarning()
     }
 
     def 'svnTag with all options'() {
@@ -5447,6 +5360,7 @@ class PublisherContextSpec extends Specification {
             tagDeleteComment[0].value() == 'delete comment'
         }
         1 * jobManagement.requireMinimumPluginVersion('svn-tag', '1.18')
+        1 * jobManagement.logDeprecationWarning()
     }
 
     def 'call cucumberReports with no options'() {

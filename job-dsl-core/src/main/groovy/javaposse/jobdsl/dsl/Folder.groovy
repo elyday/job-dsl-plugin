@@ -14,11 +14,6 @@ class Folder extends Item {
         super(jobManagement, name)
     }
 
-    @Deprecated
-    Folder(JobManagement jobManagement) {
-        super(jobManagement)
-    }
-
     /**
      * Sets the name to display instead of the actual folder name.
      */
@@ -79,10 +74,5 @@ class Folder extends Item {
                 project / 'properties' << it
             }
         }
-    }
-
-    @Deprecated
-    protected void execute(Closure rootClosure) {
-        configure(rootClosure)
     }
 }

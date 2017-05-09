@@ -16,6 +16,7 @@ import static javaposse.jobdsl.dsl.ContextHelper.toNamedNode
 import static javaposse.jobdsl.dsl.Preconditions.checkArgument
 import static javaposse.jobdsl.dsl.Preconditions.checkNotNullOrEmpty
 import static javaposse.jobdsl.dsl.helpers.common.Threshold.THRESHOLD_COLOR_MAP
+import static javaposse.jobdsl.dsl.helpers.common.Threshold.THRESHOLD_COMPLETED_BUILD
 import static javaposse.jobdsl.dsl.helpers.common.Threshold.THRESHOLD_ORDINAL_MAP
 
 @ContextType('hudson.tasks.Publisher')
@@ -928,10 +929,8 @@ class PublisherContext extends AbstractExtensibleContext {
      *
      * @since 1.22
      */
-    @RequiresPlugin(id = 'git', minimumVersion = '2.2.6')
+    @RequiresPlugin(id = 'git', minimumVersion = '2.5.3')
     void git(@DslContext(GitPublisherContext) Closure gitPublisherClosure) {
-        jobManagement.logPluginDeprecationWarning('git', '2.5.3')
-
         GitPublisherContext context = new GitPublisherContext(jobManagement)
         ContextHelper.executeInContext(gitPublisherClosure, context)
 
@@ -1021,15 +1020,21 @@ class PublisherContext extends AbstractExtensibleContext {
      */
     @RequiresPlugin(id = 'stashNotifier')
     void stashNotifier(@DslContext(StashNotifierContext) Closure stashNotifierClosure = null) {
-        StashNotifierContext context = new StashNotifierContext()
+        jobManagement.logPluginDeprecationWarning('stashNotifier', '1.11.6')
+
+        StashNotifierContext context = new StashNotifierContext(jobManagement)
         ContextHelper.executeInContext(stashNotifierClosure, context)
 
         publisherNodes << new NodeBuilder().'org.jenkinsci.plugins.stashNotifier.StashNotifier' {
-            stashServerBaseUrl()
-            stashUserName()
-            stashUserPassword()
-            ignoreUnverifiedSSLPeer(false)
-            commitSha1(context.commitSha1)
+            stashServerBaseUrl(context.serverBaseUrl ?: '')
+            if (jobManagement.isMinimumPluginVersionInstalled('stashNotifier', '1.9.0')) {
+                credentialsId(context.credentialsId ?: '')
+            } else {
+                stashUserName()
+                stashUserPassword()
+            }
+            ignoreUnverifiedSSLPeer(context.ignoreUnverifiedSSLCertificates)
+            commitSha1(context.commitSha1 ?: '')
             includeBuildNumberInKey(context.keepRepeatedBuilds)
         }
     }
@@ -1101,36 +1106,6 @@ class PublisherContext extends AbstractExtensibleContext {
             cleanWhenAborted(context.cleanWhenAborted)
             notFailBuild(!context.failBuild)
             externalDelete(context.deleteCommand ?: '')
-        }
-    }
-
-    /**
-     * Triggers a Rundeck job.
-     *
-     * @since 1.24
-     * @deprecated use the
-     *    <a href="https://github.com/jenkinsci/job-dsl-plugin/wiki/Automatically-Generated-DSL">Automatically Generated
-     *    DSL</a> instead
-     */
-    @Deprecated
-    @RequiresPlugin(id = 'rundeck', minimumVersion = '3.4')
-    void rundeck(String jobIdentifier, @DslContext(RundeckContext) Closure rundeckClosure = null) {
-        checkNotNullOrEmpty(jobIdentifier, 'jobIdentifier cannot be null or empty')
-
-        RundeckContext rundeckContext = new RundeckContext(jobManagement)
-        ContextHelper.executeInContext(rundeckClosure, rundeckContext)
-
-        publisherNodes << new NodeBuilder().'org.jenkinsci.plugins.rundeck.RundeckNotifier' {
-            jobId(jobIdentifier)
-            options(rundeckContext.options.collect { key, value -> "${key}=${value}" }.join('\n'))
-            nodeFilters(rundeckContext.nodeFilters.collect { key, value -> "${key}=${value}" }.join('\n'))
-            tag(rundeckContext.tag ?: '')
-            shouldWaitForRundeckJob(rundeckContext.shouldWaitForRundeckJob)
-            shouldFailTheBuild(rundeckContext.shouldFailTheBuild)
-            includeRundeckLogs(rundeckContext.includeRundeckLogs)
-            if (jobManagement.isMinimumPluginVersionInstalled('rundeck', '3.5.4')) {
-                rundeckInstance(rundeckContext.rundeckInstance ?: 'Default')
-            }
         }
     }
 
@@ -1348,6 +1323,7 @@ class PublisherContext extends AbstractExtensibleContext {
      * @since 1.31
      */
     @RequiresPlugin(id = 'postbuildscript', minimumVersion = '0.17')
+    @Deprecated
     void postBuildScripts(@DslContext(PostBuildScriptsContext) Closure closure) {
         PostBuildScriptsContext context = new PostBuildScriptsContext(jobManagement, item)
         ContextHelper.executeInContext(closure, context)
@@ -1420,27 +1396,6 @@ class PublisherContext extends AbstractExtensibleContext {
     }
 
     /**
-     * Allows to merge the pull request if the build was successful.
-     *
-     * @since 1.33
-     */
-    @Deprecated
-    @RequiresPlugin(id = 'ghprb', minimumVersion = '1.26')
-    void mergePullRequest(@DslContext(PullRequestPublisherContext) Closure contextClosure = null) {
-        PullRequestPublisherContext pullRequestPublisherContext = new PullRequestPublisherContext(jobManagement)
-        ContextHelper.executeInContext(contextClosure, pullRequestPublisherContext)
-
-        publisherNodes << new NodeBuilder().'org.jenkinsci.plugins.ghprb.GhprbPullRequestMerge' {
-            onlyAdminsMerge(pullRequestPublisherContext.onlyAdminsMerge)
-            disallowOwnCode(pullRequestPublisherContext.disallowOwnCode)
-            onlyTriggerPhrase(pullRequestPublisherContext.onlyTriggerPhrase)
-            mergeComment(pullRequestPublisherContext.mergeComment ?: '')
-            failOnNonMerge(pullRequestPublisherContext.failOnNonMerge)
-            deleteOnMerge(pullRequestPublisherContext.deleteOnMerge)
-        }
-    }
-
-    /**
      * Publishes builds to another Jenkins instance.
      *
      * @since 1.33
@@ -1468,8 +1423,11 @@ class PublisherContext extends AbstractExtensibleContext {
      * Sends notifications to Mattermost.
      *
      * @since 1.44
+     * @deprecated use the <a href="https://github.com/jenkinsci/job-dsl-plugin/wiki/Automatically-Generated-DSL">
+     *     Automatically Generated DSL</a> instead
      */
     @RequiresPlugin(id = 'mattermost', minimumVersion = '1.5.0')
+    @Deprecated
     void mattermost(@DslContext(MattermostPublisherContext) Closure mattermostClosure = null) {
         MattermostPublisherContext mattermostContext = new MattermostPublisherContext()
         ContextHelper.executeInContext(mattermostClosure, mattermostContext)
@@ -1535,13 +1493,24 @@ class PublisherContext extends AbstractExtensibleContext {
      */
     @RequiresPlugin(id = 'join', minimumVersion = '1.15')
     void joinTrigger(@DslContext(JoinTriggerContext) Closure joinTriggerClosure) {
+        jobManagement.logPluginDeprecationWarning('join', '1.21')
+
         JoinTriggerContext joinTriggerContext = new JoinTriggerContext(jobManagement, item)
         ContextHelper.executeInContext(joinTriggerClosure, joinTriggerContext)
 
         publisherNodes << new NodeBuilder().'join.JoinTrigger' {
             joinProjects(joinTriggerContext.projects.join(', '))
             joinPublishers(joinTriggerContext.publisherContext.publisherNodes)
-            evenIfDownstreamUnstable(joinTriggerContext.evenIfDownstreamUnstable)
+            if (jobManagement.isMinimumPluginVersionInstalled('join', '1.20')) {
+                resultThreshold {
+                    name(joinTriggerContext.resultThreshold)
+                    ordinal(THRESHOLD_ORDINAL_MAP[joinTriggerContext.resultThreshold])
+                    color(THRESHOLD_COLOR_MAP[joinTriggerContext.resultThreshold])
+                    completeBuild(THRESHOLD_COMPLETED_BUILD[joinTriggerContext.resultThreshold])
+                }
+            } else {
+                evenIfDownstreamUnstable(joinTriggerContext.evenIfDownstreamUnstable)
+            }
         }
     }
 
@@ -1595,45 +1564,12 @@ class PublisherContext extends AbstractExtensibleContext {
     }
 
     /**
-     * Sends notifications to Slack.
-     *
-     * @since 1.36
-     */
-    @RequiresPlugin(id = 'slack', minimumVersion = '1.8')
-    @Deprecated
-    void slackNotifications(@DslContext(SlackNotificationsContext) Closure slackNotificationsClosure) {
-        SlackNotificationsContext context = new SlackNotificationsContext()
-        ContextHelper.executeInContext(slackNotificationsClosure, context)
-
-        publisherNodes << new NodeBuilder().'jenkins.plugins.slack.SlackNotifier'()
-
-        item.configure {
-            it / 'properties' / 'jenkins.plugins.slack.SlackNotifier_-SlackJobProperty' {
-                teamDomain(context.teamDomain ?: '')
-                token(context.integrationToken ?: '')
-                room(context.projectChannel ?: '')
-                startNotification(context.notifyBuildStart)
-                notifySuccess(context.notifySuccess)
-                notifyAborted(context.notifyAborted)
-                notifyNotBuilt(context.notifyNotBuilt)
-                notifyUnstable(context.notifyUnstable)
-                notifyFailure(context.notifyFailure)
-                notifyBackToNormal(context.notifyBackToNormal)
-                notifyRepeatedFailure(context.notifyRepeatedFailure)
-                includeTestSummary(context.includeTestSummary)
-                showCommitList(context.showCommitList)
-                includeCustomMessage(context.customMessage as boolean)
-                customMessage(context.customMessage ?: '')
-            }
-        }
-    }
-
-    /**
      * Deploys artifacts from the build workspace to remote locations.
      *
      * @since 1.39
      */
     @RequiresPlugin(id = 'artifactdeployer', minimumVersion = '0.33')
+    @Deprecated
     void artifactDeployer(@DslContext(ArtifactDeployerPublisherContext) Closure closure) {
         ArtifactDeployerPublisherContext context = new ArtifactDeployerPublisherContext()
         ContextHelper.executeInContext(closure, context)
@@ -1686,6 +1622,7 @@ class PublisherContext extends AbstractExtensibleContext {
      * @since 1.41
      */
     @RequiresPlugin(id = 'svn-tag', minimumVersion = '1.18')
+    @Deprecated
     void svnTag(@DslContext(SubversionTagContext) Closure closure) {
         SubversionTagContext context = new SubversionTagContext()
         ContextHelper.executeInContext(closure, context)

@@ -41,7 +41,12 @@ import javaposse.jobdsl.plugin.actions.GeneratedViewsAction;
 import javaposse.jobdsl.plugin.actions.GeneratedViewsBuildAction;
 import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
+import org.acegisecurity.AccessDeniedException;
 import org.apache.commons.io.FilenameUtils;
+import org.jenkinsci.plugins.configfiles.GlobalConfigFiles;
+import org.jenkinsci.plugins.scriptsecurity.scripts.ApprovalContext;
+import org.jenkinsci.plugins.scriptsecurity.scripts.ScriptApproval;
+import org.jenkinsci.plugins.scriptsecurity.scripts.languages.GroovyLanguage;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -82,6 +87,8 @@ public class ExecuteDslScripts extends Builder implements SimpleBuildStep {
      */
     private Boolean usingScriptText;
 
+    private boolean sandbox;
+
     private boolean ignoreExisting;
 
     private boolean ignoreMissingFiles;
@@ -93,6 +100,8 @@ public class ExecuteDslScripts extends Builder implements SimpleBuildStep {
     private RemovedJobAction removedJobAction = RemovedJobAction.IGNORE;
 
     private RemovedViewAction removedViewAction = RemovedViewAction.IGNORE;
+
+    private RemovedConfigFilesAction removedConfigFilesAction = RemovedConfigFilesAction.IGNORE;
 
     private LookupStrategy lookupStrategy = LookupStrategy.JENKINS_ROOT;
 
@@ -150,6 +159,15 @@ public class ExecuteDslScripts extends Builder implements SimpleBuildStep {
         this.usingScriptText = value;
     }
 
+    public boolean isSandbox() {
+        return sandbox;
+    }
+
+    @DataBoundSetter
+    public void setSandbox(boolean sandbox) {
+        this.sandbox = sandbox;
+    }
+
     public boolean isIgnoreMissingFiles() {
         return !this.isUsingScriptText() && this.ignoreMissingFiles;
     }
@@ -204,6 +222,21 @@ public class ExecuteDslScripts extends Builder implements SimpleBuildStep {
         this.removedViewAction = removedViewAction;
     }
 
+    /**
+     * @since 1.62
+     */
+    public RemovedConfigFilesAction getRemovedConfigFilesAction() {
+        return removedConfigFilesAction;
+    }
+
+    /**
+     * @since 1.62
+     */
+    @DataBoundSetter
+    public void setRemovedConfigFilesAction(RemovedConfigFilesAction removedConfigFilesAction) {
+        this.removedConfigFilesAction = removedConfigFilesAction;
+    }
+
     public LookupStrategy getLookupStrategy() {
         return lookupStrategy == null ? LookupStrategy.JENKINS_ROOT : lookupStrategy;
     }
@@ -220,6 +253,17 @@ public class ExecuteDslScripts extends Builder implements SimpleBuildStep {
     @DataBoundSetter
     public void setAdditionalClasspath(String additionalClasspath) {
         this.additionalClasspath = fixEmptyAndTrim(additionalClasspath);
+    }
+
+    void configure(Item ancestor) {
+        if (!sandbox && isUsingScriptText() && ((DescriptorImpl) getDescriptor()).isSecurityEnabled()) {
+            ScriptApproval.get().configuring(scriptText, GroovyLanguage.get(), ApprovalContext.create().withCurrentUser().withItem(ancestor));
+        }
+    }
+
+    private Object readResolve() {
+        configure(null);
+        return this;
     }
 
     /**
@@ -248,7 +292,17 @@ public class ExecuteDslScripts extends Builder implements SimpleBuildStep {
                         getTargets(), isUsingScriptText(), getScriptText(), ignoreExisting, isIgnoreMissingFiles(), additionalClasspath
                 );
 
-                JenkinsDslScriptLoader dslScriptLoader = new JenkinsDslScriptLoader(jobManagement);
+                JenkinsDslScriptLoader dslScriptLoader;
+                if (((DescriptorImpl) getDescriptor()).isSecurityEnabled()) {
+                    if (sandbox) {
+                        dslScriptLoader = new SandboxDslScriptLoader(jobManagement, run.getParent());
+                    } else {
+                        dslScriptLoader = new ScriptApprovalDslScriptLoader(jobManagement, run.getParent());
+                    }
+                } else {
+                    dslScriptLoader = new JenkinsDslScriptLoader(jobManagement);
+                }
+
                 GeneratedItems generatedItems = dslScriptLoader.runScripts(scriptRequests);
                 Set<GeneratedJob> freshJobs = generatedItems.getJobs();
                 Set<GeneratedView> freshViews = generatedItems.getViews();
@@ -270,7 +324,7 @@ public class ExecuteDslScripts extends Builder implements SimpleBuildStep {
                 generator.close();
             }
         } catch (RuntimeException e) {
-            if (!(e instanceof DslException)) {
+            if (!(e instanceof DslException) && !(e instanceof AccessDeniedException)) {
                 e.printStackTrace(listener.getLogger());
             }
             LOGGER.log(Level.FINE, String.format("Exception while processing DSL scripts: %s", e.getMessage()), e);
@@ -375,7 +429,12 @@ public class ExecuteDslScripts extends Builder implements SimpleBuildStep {
                     removed.add(unreferencedJob);
                 } else {
                     if (removedItem instanceof AbstractProject) {
-                        ((AbstractProject) removedItem).disable();
+                        AbstractProject project = (AbstractProject) removedItem;
+                        project.checkPermission(Item.CONFIGURE);
+                        if (project.isInQueue()) {
+                            project.checkPermission(Item.CANCEL); // disable() will cancel queued builds
+                        }
+                        project.disable();
                         disabled.add(unreferencedJob);
                     }
                 }
@@ -449,6 +508,7 @@ public class ExecuteDslScripts extends Builder implements SimpleBuildStep {
                 if (parent instanceof ViewGroup) {
                     View view = ((ViewGroup) parent).getView(FilenameUtils.getName(viewName));
                     if (view != null) {
+                        view.checkPermission(View.DELETE);
                         ((ViewGroup) parent).deleteView(view);
                         removed.add(unreferencedView);
                     }
@@ -473,6 +533,14 @@ public class ExecuteDslScripts extends Builder implements SimpleBuildStep {
         logItems(listener, "Added config files", added);
         logItems(listener, "Existing config files", existing);
         logItems(listener, "Unreferenced config files", unreferenced);
+
+        if (removedConfigFilesAction == RemovedConfigFilesAction.DELETE && Jenkins.getInstance().getPluginManager().getPlugin("config-file-provider") != null) {
+            GlobalConfigFiles globalConfigFiles = GlobalConfigFiles.get();
+            for (GeneratedConfigFile unreferencedConfigFile : unreferenced) {
+                Jenkins.getActiveInstance().checkPermission(Jenkins.ADMINISTER);
+                globalConfigFiles.remove(unreferencedConfigFile.getId());
+            }
+        }
     }
 
     private void updateGeneratedUserContents(Job seedJob, TaskListener listener,

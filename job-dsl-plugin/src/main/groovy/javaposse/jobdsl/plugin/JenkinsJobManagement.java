@@ -53,7 +53,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.StringReader;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -135,7 +134,6 @@ public class JenkinsJobManagement extends AbstractJobManagement {
         String path = dslItem.getName();
 
         LOGGER.log(Level.INFO, format("createOrUpdateConfig for %s", path));
-        boolean created = false;
 
         validateNameArg(path);
 
@@ -144,11 +142,12 @@ public class JenkinsJobManagement extends AbstractJobManagement {
         Jenkins.checkGoodName(jobName);
 
         if (item == null) {
-            created = createNewItem(path, dslItem);
+            createNewItem(path, dslItem);
+            return true;
         } else if (!ignoreExisting) {
-            created = updateExistingItem(item, dslItem);
+            return updateExistingItem(item, dslItem);
         }
-        return created;
+        return false;
     }
 
     @Override
@@ -164,9 +163,10 @@ public class JenkinsJobManagement extends AbstractJobManagement {
                 View view = ((ViewGroup) parent).getView(viewBaseName);
                 if (view == null) {
                     if (parent instanceof ModifiableViewGroup) {
+                        ((ModifiableViewGroup) parent).checkPermission(View.CREATE);
                         ((ModifiableViewGroup) parent).addView(createViewFromXML(viewBaseName, inputStream));
                     } else {
-                        LOGGER.log(Level.WARNING, format("Could not create view within %s", parent.getClass()));
+                        throw new DslException(format(Messages.CreateView_UnsupportedParent(), parent.getFullName(), parent.getClass()));
                     }
                 } else if (!ignoreExisting) {
                     checkItemType(view, inputStream);
@@ -176,13 +176,10 @@ public class JenkinsJobManagement extends AbstractJobManagement {
             } else if (parent == null) {
                 throw new DslException(format(Messages.CreateView_UnknownParent(), path));
             } else {
-                LOGGER.log(Level.WARNING, format("Could not create view within %s", parent.getClass()));
+                throw new DslException(format(Messages.CreateView_UnsupportedParent(), parent.getFullName(), parent.getClass()));
             }
-        } catch (UnsupportedEncodingException e) {
-            LOGGER.log(Level.WARNING, "Unsupported encoding used in config. Should be UTF-8.");
         } catch (IOException e) {
-            e.printStackTrace();
-            LOGGER.log(Level.WARNING, format("Error writing config for new view %s.", path), e);
+            throw new DslException(e);
         }
     }
 
@@ -190,6 +187,7 @@ public class JenkinsJobManagement extends AbstractJobManagement {
     @Deprecated
     public String createOrUpdateConfigFile(ConfigFile configFile, boolean ignoreExisting) {
         validateNameArg(configFile.getName());
+        Jenkins.getActiveInstance().checkPermission(Jenkins.ADMINISTER);
 
         Jenkins jenkins = Jenkins.getInstance();
 
@@ -222,6 +220,8 @@ public class JenkinsJobManagement extends AbstractJobManagement {
 
     @Override
     public void createOrUpdateUserContent(UserContent userContent, boolean ignoreExisting) {
+        // As in git-userContent-plugin:
+        Jenkins.getActiveInstance().checkPermission(Jenkins.ADMINISTER);
         try {
             FilePath file = Jenkins.getInstance().getRootPath().child("userContent").child(userContent.getPath());
             if (!(file.exists() && ignoreExisting)) {
@@ -229,7 +229,6 @@ public class JenkinsJobManagement extends AbstractJobManagement {
                 file.copyFrom(userContent.getContent());
             }
         } catch (Exception e) {
-            e.printStackTrace();
             throw new DslException(
                     format(Messages.CreateOrUpdateUserContent_Exception(), userContent.getPath(), e.getMessage())
             );
@@ -250,6 +249,7 @@ public class JenkinsJobManagement extends AbstractJobManagement {
         validateNameArg(path);
 
         BuildableItem project = lookupStrategy.getItem(this.project, path, BuildableItem.class);
+        project.checkPermission(Item.BUILD);
 
         LOGGER.log(Level.INFO, format("Scheduling build of %s from %s", path, project.getName()));
         project.scheduleBuild(run == null ? new JobDslCause() : new Cause.UpstreamCause(run));
@@ -258,12 +258,18 @@ public class JenkinsJobManagement extends AbstractJobManagement {
 
     @Override
     public InputStream streamFileInWorkspace(String relLocation) throws IOException, InterruptedException {
+        if (project != null) {
+            project.checkPermission(Item.WORKSPACE);
+        }
         FilePath filePath = locateValidFileInWorkspace(workspace, relLocation);
         return filePath.read();
     }
 
     @Override
     public String readFileInWorkspace(String relLocation) throws IOException, InterruptedException {
+        if (project != null) {
+            project.checkPermission(Item.WORKSPACE);
+        }
         FilePath filePath = locateValidFileInWorkspace(workspace, relLocation);
         return filePath.readToString();
     }
@@ -272,6 +278,7 @@ public class JenkinsJobManagement extends AbstractJobManagement {
     public String readFileInWorkspace(String jobName, String relLocation) throws IOException, InterruptedException {
         Item item = Jenkins.getInstance().getItemByFullName(jobName);
         if (item instanceof AbstractProject) {
+            item.checkPermission(Item.WORKSPACE);
             FilePath workspace = ((AbstractProject) item).getSomeWorkspace();
             if (workspace != null) {
                 try {
@@ -383,7 +390,9 @@ public class JenkinsJobManagement extends AbstractJobManagement {
             if (configProvider != null) {
                 Config config = findConfig(configProvider, name);
                 if (config != null) {
-                    logDeprecationWarning("finding managed config files by name");
+                    if (!config.id.equals(name)) {
+                        logDeprecationWarning("finding managed config files by name");
+                    }
                     return config.id;
                 }
             }
@@ -467,6 +476,7 @@ public class JenkinsJobManagement extends AbstractJobManagement {
 
         AbstractItem item = lookupStrategy.getItem(project, path, AbstractItem.class);
         if (item != null) {
+            item.checkPermission(Item.EXTENDED_READ);
             XmlFile xmlFile = item.getConfigFile();
             String jobXml = xmlFile.asString();
             LOGGER.log(Level.FINE, format("Looked up item with config %s", jobXml));
@@ -479,7 +489,8 @@ public class JenkinsJobManagement extends AbstractJobManagement {
 
     private boolean updateExistingItem(AbstractItem item, javaposse.jobdsl.dsl.Item dslItem) {
         String config = dslItem.getXml();
-        boolean created;
+
+        item.checkPermission(Item.EXTENDED_READ);
 
         // Leverage XMLUnit to perform diffs
         Diff diff;
@@ -503,17 +514,16 @@ public class JenkinsJobManagement extends AbstractJobManagement {
         try {
             item.updateByXml(streamSource);
             notifyItemUpdated(item, dslItem);
-            created = true;
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Error writing updated item to file.", e);
-            created = false;
+            throw new DslException(e);
         }
-        return created;
+        return true;
     }
 
     private void checkItemType(AbstractItem item, javaposse.jobdsl.dsl.Item dslItem) {
         Node oldConfig;
 
+        item.checkPermission(Item.EXTENDED_READ);
         try {
             oldConfig = new XmlParser().parse(item.getConfigFile().getFile());
         } catch (Exception e) {
@@ -539,10 +549,9 @@ public class JenkinsJobManagement extends AbstractJobManagement {
         }
     }
 
-    private boolean createNewItem(String path, javaposse.jobdsl.dsl.Item dslItem) {
+    private void createNewItem(String path, javaposse.jobdsl.dsl.Item dslItem) {
         String config = dslItem.getXml();
         LOGGER.log(Level.FINE, format("Creating item as %s", config));
-        boolean created = false;
 
         try {
             InputStream is = new ByteArrayInputStream(config.getBytes("UTF-8"));
@@ -552,18 +561,14 @@ public class JenkinsJobManagement extends AbstractJobManagement {
             if (parent instanceof ModifiableTopLevelItemGroup) {
                 Item project = ((ModifiableTopLevelItemGroup) parent).createProjectFromXML(itemName, is);
                 notifyItemCreated(project, dslItem);
-                created = true;
             } else if (parent == null) {
                 throw new DslException(format(Messages.CreateItem_UnknownParent(), path));
             } else {
-                LOGGER.log(Level.WARNING, format("Could not create item within %s", parent.getClass()));
+                throw new DslException(format(Messages.CreateItem_UnsupportedParent(), parent.getFullName(), parent.getClass()));
             }
-        } catch (UnsupportedEncodingException e) {
-            LOGGER.log(Level.WARNING, "Unsupported encoding used in config. Should be UTF-8.");
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, format("Error writing config for new item %s.", path), e);
+            throw new DslException(e);
         }
-        return created;
     }
 
     private void notifyItemCreated(Item item, javaposse.jobdsl.dsl.Item dslItem) {

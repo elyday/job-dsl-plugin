@@ -24,16 +24,14 @@ class BranchSourcesContext extends AbstractExtensibleContext {
     /**
      * Adds a Git branch source. Can be called multiple times to add more branch sources.
      */
-    @RequiresPlugin(id = 'git', minimumVersion = '2.2.6')
+    @RequiresPlugin(id = 'git', minimumVersion = '2.5.3')
     void git(@DslContext(GitBranchSourceContext) Closure branchSourceClosure) {
-        jobManagement.logPluginDeprecationWarning('git', '2.5.3')
-
         GitBranchSourceContext context = new GitBranchSourceContext()
         ContextHelper.executeInContext(branchSourceClosure, context)
 
         branchSourceNodes << new NodeBuilder().'jenkins.branch.BranchSource' {
             source(class: 'jenkins.plugins.git.GitSCMSource') {
-                id(UUID.randomUUID())
+                id(context.id)
                 remote(context.remote ?: '')
                 credentialsId(context.credentialsId ?: '')
                 includes(context.includes ?: '')
@@ -60,7 +58,7 @@ class BranchSourcesContext extends AbstractExtensibleContext {
 
         branchSourceNodes << new NodeBuilder().'jenkins.branch.BranchSource' {
             source(class: 'org.jenkinsci.plugins.github_branch_source.GitHubSCMSource') {
-                id(UUID.randomUUID())
+                id(context.id)
                 if (context.apiUri) {
                     apiUri(context.apiUri)
                 }

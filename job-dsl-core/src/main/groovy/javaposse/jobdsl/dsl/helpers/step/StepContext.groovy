@@ -459,6 +459,7 @@ class StepContext extends AbstractExtensibleContext {
      * Builds a Grails project.
      */
     @RequiresPlugin(id = 'grails')
+    @Deprecated
     void grails(@DslContext(GrailsContext) Closure grailsClosure) {
         grails null, false, grailsClosure
     }
@@ -467,6 +468,7 @@ class StepContext extends AbstractExtensibleContext {
      * Builds a Grails project.
      */
     @RequiresPlugin(id = 'grails')
+    @Deprecated
     void grails(String targets, @DslContext(GrailsContext) Closure grailsClosure) {
         grails targets, false, grailsClosure
     }
@@ -475,6 +477,7 @@ class StepContext extends AbstractExtensibleContext {
      * Builds a Grails project.
      */
     @RequiresPlugin(id = 'grails')
+    @Deprecated
     void grails(String targets = null, boolean useWrapper = false,
                 @DslContext(GrailsContext) Closure grailsClosure = null) {
         GrailsContext grailsContext = new GrailsContext(
@@ -642,10 +645,12 @@ class StepContext extends AbstractExtensibleContext {
     @RequiresPlugin(id = 'Parameterized-Remote-Trigger')
     void remoteTrigger(String remoteJenkins, String jobName,
                        @DslContext(ParameterizedRemoteTriggerContext) Closure closure = null) {
+        jobManagement.logPluginDeprecationWarning('Parameterized-Remote-Trigger', '2.0')
+
         Preconditions.checkNotNullOrEmpty(remoteJenkins, 'remoteJenkins must be specified')
         Preconditions.checkNotNullOrEmpty(jobName, 'jobName must be specified')
 
-        ParameterizedRemoteTriggerContext context = new ParameterizedRemoteTriggerContext()
+        ParameterizedRemoteTriggerContext context = new ParameterizedRemoteTriggerContext(jobManagement)
         ContextHelper.executeInContext(closure, context)
 
         List<String> jobParameters = context.parameters.collect { String key, String value -> "$key=$value" }
@@ -668,9 +673,13 @@ class StepContext extends AbstractExtensibleContext {
                     }
                 }
             }
-            overrideAuth(false)
+            overrideAuth(context.credentialsIds as boolean)
             auth {
                 'org.jenkinsci.plugins.ParameterizedRemoteTrigger.Auth' {
+                    if (context.credentialsIds) {
+                        authType('credentialsPlugin')
+                        creds(context.credentialsIds)
+                    }
                     NONE('none')
                     API__TOKEN('apiToken')
                     CREDENTIALS__PLUGIN('credentialsPlugin')
@@ -689,10 +698,8 @@ class StepContext extends AbstractExtensibleContext {
      *
      * @since 1.24
      */
-    @RequiresPlugin(id = 'Exclusion')
+    @RequiresPlugin(id = 'Exclusion', minimumVersion = '0.12')
     void criticalBlock(@DslContext(StepContext) Closure closure) {
-        jobManagement.logPluginDeprecationWarning('Exclusion', '0.12')
-
         StepContext stepContext = new StepContext(jobManagement, item)
         ContextHelper.executeInContext(closure, stepContext)
 
@@ -1022,6 +1029,7 @@ class StepContext extends AbstractExtensibleContext {
      * @since 1.39
      */
     @RequiresPlugin(id = 'artifactdeployer', minimumVersion = '0.33')
+    @Deprecated
     void artifactDeployer(@DslContext(ArtifactDeployerContext) Closure closure) {
         ArtifactDeployerContext context = new ArtifactDeployerContext()
         ContextHelper.executeInContext(closure, context)

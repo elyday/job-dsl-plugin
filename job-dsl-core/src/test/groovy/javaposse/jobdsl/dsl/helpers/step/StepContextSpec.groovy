@@ -320,6 +320,7 @@ class StepContextSpec extends Specification {
         grailsStep0.forceUpgrade[0].value() == false
         grailsStep0.nonInteractive[0].value() == true
         (1.._) * jobManagement.requirePlugin('grails')
+        1 * jobManagement.logDeprecationWarning()
 
         when:
         context.grails('compile', true)
@@ -338,6 +339,7 @@ class StepContextSpec extends Specification {
         grailsStep1.forceUpgrade[0].value() == false
         grailsStep1.nonInteractive[0].value() == true
         (1.._) * jobManagement.requirePlugin('grails')
+        1 * jobManagement.logDeprecationWarning()
 
         when:
         context.grails('compile', false) {
@@ -359,6 +361,7 @@ class StepContextSpec extends Specification {
         grailsStep2.forceUpgrade[0].value() == false
         grailsStep2.nonInteractive[0].value() == false
         (1.._) * jobManagement.requirePlugin('grails')
+        1 * jobManagement.logDeprecationWarning()
 
         when:
         context.grails {
@@ -389,6 +392,7 @@ class StepContextSpec extends Specification {
         grailsStep3.forceUpgrade[0].value() == true
         grailsStep3.nonInteractive[0].value() == false
         (1.._) * jobManagement.requirePlugin('grails')
+        (1.._) * jobManagement.logDeprecationWarning()
 
         when:
         context.grails '"test-app --stacktrace"', {
@@ -415,6 +419,7 @@ class StepContextSpec extends Specification {
         grailsStep4.forceUpgrade[0].value() == true
         grailsStep4.nonInteractive[0].value() == false
         (1.._) * jobManagement.requirePlugin('grails')
+        (1.._) * jobManagement.logDeprecationWarning()
 
         when:
         context.grails {
@@ -434,6 +439,7 @@ class StepContextSpec extends Specification {
         grailsStep5.forceUpgrade[0].value() == false
         grailsStep5.nonInteractive[0].value() == true
         (1.._) * jobManagement.requirePlugin('grails')
+        (1.._) * jobManagement.logDeprecationWarning()
     }
 
     def 'call maven methods'() {
@@ -1054,8 +1060,7 @@ class StepContextSpec extends Specification {
         Node selectorNode9 = context.stepNodes[8].selector[0]
         selectorNode9.attribute('class') == 'com.tikal.jenkins.plugins.multijob.MultiJobBuildSelector'
         selectorNode9.children().size() == 0
-        1 * jobManagement.requireMinimumPluginVersion('jenkins-multijob-plugin', '1.17')
-        1 * jobManagement.logPluginDeprecationWarning('jenkins-multijob-plugin', '1.22')
+        1 * jobManagement.requireMinimumPluginVersion('jenkins-multijob-plugin', '1.22')
     }
 
     def 'copyArtifacts with selector extension'() {
@@ -1885,7 +1890,7 @@ class StepContextSpec extends Specification {
         }
         1 * jobManagement.requireMinimumPluginVersion('parameterized-trigger', '2.26')
         1 * jobManagement.requirePlugin('nodelabelparameter')
-        1 * jobManagement.requireMinimumPluginVersion('git', '2.2.6')
+        1 * jobManagement.requireMinimumPluginVersion('git', '2.5.3')
     }
 
     def 'call downstream build step with no args'() {
@@ -2591,13 +2596,15 @@ class StepContextSpec extends Specification {
             queryString[0].value() == []
         }
         1 * jobManagement.requirePlugin('Parameterized-Remote-Trigger')
+        1 * jobManagement.logPluginDeprecationWarning('Parameterized-Remote-Trigger', '2.0')
     }
 
-    def 'call remoteTrigger with parameters'() {
+    def 'call remoteTrigger with parameters and credentials'() {
         when:
         context.remoteTrigger('dev-ci', 'test') {
             parameter 'foo', '1'
             parameters bar: '2', baz: '3'
+            overrideCredentials('test')
         }
 
         then:
@@ -2617,10 +2624,12 @@ class StepContextSpec extends Specification {
             parameterList[0].string[0].value() == 'foo=1'
             parameterList[0].string[1].value() == 'bar=2'
             parameterList[0].string[2].value() == 'baz=3'
-            overrideAuth[0].value() == false
+            overrideAuth[0].value() == true
             auth[0].children().size() == 1
             with(auth[0].'org.jenkinsci.plugins.ParameterizedRemoteTrigger.Auth'[0]) {
-                children().size() == 3
+                children().size() == 5
+                authType[0].value() == 'credentialsPlugin'
+                creds[0].value() == 'test'
                 NONE[0].value() == 'none'
                 API__TOKEN[0].value() == 'apiToken'
                 CREDENTIALS__PLUGIN[0].value() == 'credentialsPlugin'
@@ -2630,6 +2639,8 @@ class StepContextSpec extends Specification {
             queryString[0].value() == []
         }
         1 * jobManagement.requirePlugin('Parameterized-Remote-Trigger')
+        1 * jobManagement.requireMinimumPluginVersion('Parameterized-Remote-Trigger', '2.0')
+        1 * jobManagement.logPluginDeprecationWarning('Parameterized-Remote-Trigger', '2.0')
     }
 
     def 'call remoteTrigger with parameters and config'() {
@@ -2674,6 +2685,7 @@ class StepContextSpec extends Specification {
             queryString[0].value() == []
         }
         1 * jobManagement.requirePlugin('Parameterized-Remote-Trigger')
+        1 * jobManagement.logPluginDeprecationWarning('Parameterized-Remote-Trigger', '2.0')
     }
 
     def 'call remoteTrigger without jenkins'() {
@@ -2715,8 +2727,7 @@ class StepContextSpec extends Specification {
         context.stepNodes[0].name() == 'org.jvnet.hudson.plugins.exclusion.CriticalBlockStart'
         context.stepNodes[1].name() == 'hudson.tasks.Shell'
         context.stepNodes[2].name() == 'org.jvnet.hudson.plugins.exclusion.CriticalBlockEnd'
-        1 * jobManagement.requirePlugin('Exclusion')
-        1 * jobManagement.logPluginDeprecationWarning('Exclusion', '0.12')
+        1 * jobManagement.requireMinimumPluginVersion('Exclusion', '0.12')
     }
 
     def 'call rake method'() {
@@ -3421,6 +3432,7 @@ class StepContextSpec extends Specification {
             }
         }
         1 * jobManagement.requireMinimumPluginVersion('artifactdeployer', '0.33')
+        1 * jobManagement.logDeprecationWarning()
     }
 
     def 'call artifactDeployer with all options'() {
@@ -3457,6 +3469,7 @@ class StepContextSpec extends Specification {
             }
         }
         1 * jobManagement.requireMinimumPluginVersion('artifactdeployer', '0.33')
+        1 * jobManagement.logDeprecationWarning()
     }
 
     def 'call managedScript with minimal options'() {

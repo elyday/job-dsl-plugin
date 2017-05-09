@@ -1,3 +1,140 @@
+## Migrating to 1.62
+
+### Parameterized Remote Trigger Plugin
+
+Support for versions older than 2.0 of the
+[Parameterized Remote Trigger Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Parameterized+Remote+Trigger+Plugin)
+is [[deprecated|Deprecation-Policy]] and will be removed.
+
+### Build Flow Plugin
+
+The [Build Flow Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Build+Flow+Plugin) has been removed from the Update
+Center due to [Security Vulnerabilities](https://jenkins.io/security/advisory/2017-04-10/). As a consequence the DSL
+support is [[deprecated|Deprecation-Policy]] and will be removed.
+
+### Active Choices Plugin
+
+The [Active Choices Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Active+Choices+Plugin) has been removed from the
+Update Center due to [Security Vulnerabilities](https://jenkins.io/security/advisory/2017-04-10/). As a consequence the
+DSL support is [[deprecated|Deprecation-Policy]] and will be removed.
+
+### PostBuildScript Plugin
+
+The [PostBuildScript Plugin](https://wiki.jenkins-ci.org/display/JENKINS/PostBuildScript+Plugin) has been removed from
+the Update Center due to [Security Vulnerabilities](https://jenkins.io/security/advisory/2017-04-10/). As a consequence
+the DSL support is [[deprecated|Deprecation-Policy]] and will be removed.
+
+### ArtifactDeployer Plugin
+
+The [ArtifactDeployer Plugin](https://wiki.jenkins-ci.org/display/JENKINS/ArtifactDeployer+Plugin) has been removed from
+the Update Center due to [Security Vulnerabilities](https://jenkins.io/security/advisory/2017-04-10/). As a consequence
+the DSL support is [[deprecated|Deprecation-Policy]] and will be removed.
+
+### Subversion Tagging Plugin
+
+The [Subversion Tagging Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Subversion+Tagging+Plugin) has been removed
+from the Update Center due to [Security Vulnerabilities](https://jenkins.io/security/advisory/2017-04-10/). As a
+consequence the DSL support is [[deprecated|Deprecation-Policy]] and will be removed.
+
+### Grails Plugin
+
+The [Grails Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Grails+Plugin) has been removed from the Update Center
+due to [Security Vulnerabilities](https://jenkins.io/security/advisory/2017-04-10/). As a consequence the DSL support is
+[[deprecated|Deprecation-Policy]] and will be removed.
+
+## Migrating to 1.61
+
+### Stash Notifier Plugin
+
+Support for versions older than 1.11.6 of the
+[Stash Notifier Plugin](https://wiki.jenkins-ci.org/display/JENKINS/StashNotifier+Plugin) is
+[[deprecated|Deprecation-Policy]] and will be removed.
+
+### Join Plugin
+
+Support for versions older than 1.21 of the [Join Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Join+Plugin) is
+[[deprecated|Deprecation-Policy]] and will be removed.
+
+## Migrating to 1.60
+
+### Script Security
+
+Starting with Job DSL 1.60, script security for Job DSL scripts is enabled by default if Jenkins
+security is enabled. As a consequence, DSL scripts have either to be approved by an Jenkins administrator or run in an
+restricted sandbox. To avoid loading arbitrary code from the workspace without approval, the script directory is not 
+added to the classpath and additional classpath entries are not supported when security is enabled. Thus importing
+classes from the workspace is not possible and the "Additional Classpath" option is not available.
+
+Note that some operators in [[configure blocks|The Configure Block]] are not available when running in the restricted
+sandbox.
+
+When using the sandbox, Jenkins access control checks are also applied. For this to work, the DSL job needs to run as
+a particular user. This is generally accomplished by installing and configuring the
+[Authorize Project plugin](https://wiki.jenkins-ci.org/display/JENKINS/Authorize+Project+plugin).
+
+To restore the old behavior, Job DSL script security can be disabled on the "Configure Global Security" page. But this
+decision should be taken with care and only if understanding the consequences as it would allow users to run arbitrary
+code within the Jenkins process (even changing its security settings or running shell commands on the server).
+
+See [[Script Security]] for details.
+
+## Migrating to 1.59
+
+### Mattermost
+
+Support for the [Mattermost Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Mattermost+Plugin) is
+[deprecated|Deprecation-Policy]] and will be removed. Use the syntax provided by the [[Automatically Generated DSL]]
+instead.
+
+DSL prior to 1.59
+```
+job('example') {
+    publishers {
+        mattermost {
+            endpoint(String endpoint)
+            showCommitList(boolean showCommitList = true)
+            customMessage(String customMessage)
+            icon(String icon)
+            includeTestSummary(boolean includeTestSummary = true)
+            notifyAborted(boolean notifyAborted = true)
+            notifyBackToNormal(boolean notifyBackToNormal = true)
+            notifyFailure(boolean notifyFailure = true)
+            notifyNotBuilt(boolean notifyNotBuilt = true)
+            notifyRepeatedFailure(boolean notifyRepeatedFailure = true)
+            notifySuccess(boolean notifySuccess = true)
+            notifyUnstable(boolean notifyUnstable = true)
+            room(String room)
+            notifyBuildStart(boolean notifyBuildStart = true)
+        }
+    }
+}
+```
+
+DSL since 1.59
+```
+job('example') {
+    publishers {
+        mattermostNotifier {
+            endpoint(String value)
+            commitInfoChoice(String value)
+            customMessage(String value)
+            includeCustomMessage(boolean value)
+            icon(String value)
+            includeTestSummary(boolean value)
+            notifyAborted(boolean value)
+            notifyBackToNormal(boolean value)
+            notifyFailure(boolean value)
+            notifyNotBuilt(boolean value)
+            notifyRepeatedFailure(boolean value)
+            notifySuccess(boolean value)
+            notifyUnstable(boolean value)
+            room(String value)
+            startNotification(boolean value)
+        }
+    }
+}
+```
+
 ## Migrating to 1.58
 
 ### Config Files

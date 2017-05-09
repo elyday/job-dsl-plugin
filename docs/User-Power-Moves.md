@@ -13,6 +13,12 @@ If you already have the source code checked out then you can ignore step 1.
 
 What's going on here is that there's a static main method that can run the DSL, you just have to give it a filename. It'll output all the jobs' XML to the current directory. Likewise, if you use "using" (the templates-like feature) it'll look in the current directory for a file with the name of the job appended with ".xml" at the end of it.
 
+By default the current directory is added to the classpath to be able to import classes. When using sub-directories for
+scripts, the classpath differs compared to running in Jenkins where the DSL script's directory is added to the
+classpath. Add the `-j` command line option to use the same behavior as when running in Jenkins:
+
+    java -jar $DSL_JAR -j sample.dsl.groovy
+
 # Generate a Job config.xml without having to fire up Jenkins
 1. Add some job dsl content to a file, say job.dsl
 1. Run the gradle command:  ./gradlew run -Pargs=job.dsl
@@ -219,7 +225,13 @@ Options:
                       DSL scripts, defaults to `'IGNORE'`
 * `removedViewAction`: optional, set to `'DELETE'` to delete views that have been removed from Job DSL scripts, defaults
                        to `'IGNORE'`
+* `removedConfigFilesAction`: optional, set to `'DELETE'` to delete config files that have been removed from Job DSL
+                              scripts, defaults to `'IGNORE'`
 * `lookupStrategy`: optional, when set to `'SEED_JOB'` job names will be interpreted as relative to the pipeline job,
                     defaults to `'JENKINS_ROOT` which will treat all job names as absolute
 * `additionalClasspath`: optional, newline separated list of additional classpath entries for Job DSL scripts, file
-                         names must be relative to the workspace
+                         names must be relative to the workspace; this option will be ignored when script security for
+                         Job DSL is enabled on the "Configure Global Security" page
+* `sandbox`: optional, defaults to `false`, if `false` the DSL script needs to be approved by an administrator; set to
+             `true` to run the DSL scripts in a sandbox with limited abilities (see [[Script Security]]); this option
+              will be ignored when script security for Job DSL is disabled on the "Configure Global Security" page

@@ -473,6 +473,7 @@ class JobParentSpec extends Specification {
         job.name == 'test'
         parent.referencedJobs.contains(job)
         1 * jobManagement.requirePlugin('build-flow-plugin', true)
+        1 * jobManagement.logDeprecationWarning()
     }
 
     def 'ivyJob'() {
@@ -526,8 +527,7 @@ class JobParentSpec extends Specification {
         then:
         job.name == 'test'
         parent.referencedJobs.contains(job)
-        1 * jobManagement.requireMinimumPluginVersion('jenkins-multijob-plugin', '1.16', true)
-        1 * jobManagement.logPluginDeprecationWarning('jenkins-multijob-plugin', '1.22')
+        1 * jobManagement.requireMinimumPluginVersion('jenkins-multijob-plugin', '1.22', true)
     }
 
     def 'pipeline'() {
